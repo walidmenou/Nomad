@@ -38,3 +38,10 @@ type expr =
   | App of expr * expr
   | List of expr list
   | Match of expr * (pattern * expr) list
+
+type statement =
+  | LetStmt of ident * expr
+  | RecStmt of ident * expr
+  | ExprStmt of expr
+
+type program = statement list

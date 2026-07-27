@@ -205,6 +205,9 @@ and let_rec_expr input =
     keyword "in" |>> expr |*> fun exp2 -> return (Rec (id, exp1, exp2)) )
     input
 
+let statement _ = failwith "unimplemented"
+let program _ = failwith "unimplemented"
+
 let run p s =
   match p (explode s) with
   | Some (res, []) -> Ok res

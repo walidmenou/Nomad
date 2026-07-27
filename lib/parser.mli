@@ -163,3 +163,9 @@ val pattern : pattern t
 
 val let_rec_expr : expr t
 (** Parses a `let rec ... = ... in ...` expression *)
+
+val statement : statement t
+(** Parses a single statement *)
+
+val program : program t
+(** Parses a program consisting of a list of statements *)
