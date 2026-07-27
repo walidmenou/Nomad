@@ -133,3 +133,12 @@ val app_expr : expr t
 
 val expr : expr t
 (** Parses an expression *)
+
+val pipe : unit t
+(** Parse a pipe operator `|>`*)
+
+val pipe_chain : expr t
+(** Parses chained pipe operations, e.g: `f1 |> f2 |> f3 |> ... |> fn` *)
+
+val match_expr : expr t
+(** Parses a pattern matching expression *)

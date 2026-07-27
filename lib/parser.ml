@@ -83,18 +83,18 @@ let ident =
 
 let int_lit = integer |*> fun x -> return (Int x)
 
-let bool_lit =
-  keyword "true" |>> return (Bool true)
-  <|> (keyword "false" |>> return (Bool false))
+let boolean =
+  keyword "true" |>> return true <|> (keyword "false" |>> return false)
 
+let bool_lit = boolean |*> fun x -> return (Bool x)
 let unit_lit = keyword "()" |>> return Unit
 
-let string_lit =
-  token
-    ( between (char '"') (char '"') (many (satisfies (fun c -> c != '"')))
-    |*> fun cs -> return (String (ltos cs)) )
+let string =
+  between (char '"') (char '"') (many (satisfies (fun c -> c <> '"')))
+  |*> fun cs -> return (ltos cs)
 
-let val_expr = ident |*> fun x -> return (Val x)
+let string_lit = token (string |*> fun s -> String s)
+let var_expr = ident |*> fun x -> return (Var x)
 let lit_expr = int_lit <|> bool_lit <|> unit_lit <|> string_lit
 
 let addop =
@@ -111,6 +111,8 @@ let cmpop =
   <|> (keyword ">=" |*> fun _ -> return Geq)
   <|> (keyword "<" |*> fun _ -> return Less)
   <|> (keyword ">" |*> fun _ -> return Greater)
+
+let arrow = keyword "->"
 
 let chain_left op_p exp_p =
   exp_p |*> fun r ->
@@ -137,6 +139,19 @@ let chain_cmps op_p exp_p =
       exp_p |*> fun exp -> return (op, exp) )
   |*> fun pairs -> return (cmp_helper first pairs)
 
+let pipe = keyword "|>"
+
+let pipe_chain =
+  sep_by pipe expr |*> fun (first :: rest) ->
+  List.fold_left (fun acc f -> App (f, acc)) first rest
+
+let wildcard_pat = keyword "_" |>> return PatWildcard
+let var_pat = ident |*> fun x -> return (PatVar x)
+let int_pat = integer |*> fun i -> return (PatInt i)
+let bool_pat = boolean |*> fun b -> return (PatBool b)
+let string_pat = string |*> fun s -> return (PatString s)
+let pattern = wildcard_pat <|> var_pat <|> int_pat <|> bool_pat <|> string_pat
+
 let rec expr input = (if_expr <|> fun_expr <|> let_expr <|> cmp_expr) input
 and cmp_expr input = chain_cmps cmpop arith_expr input
 and arith_expr input = chain_left eqop add_expr input
@@ -149,7 +164,7 @@ and app_expr input =
     return (List.fold_left (fun acc arg -> App (acc, arg)) f args) )
     input
 
-and atom_expr input = (lit_expr <|> val_expr <|> parenthesized expr) input
+and atom_expr input = (lit_expr <|> var_expr <|> parenthesized expr) input
 
 and if_expr input =
   ( keyword "if" |>> expr |*> fun exp1 ->
@@ -159,13 +174,27 @@ and if_expr input =
 
 and fun_expr input =
   ( keyword "fun" |>> ident |*> fun id ->
-    keyword "->" |>> expr |*> fun exp -> return (Fun (id, exp)) )
+    arrow |>> expr |*> fun exp -> return (Fun (id, exp)) )
     input
 
 and let_expr input =
   ( keyword "let" |>> ident |*> fun id ->
     keyword "=" |>> expr |*> fun exp1 ->
     keyword "in" |>> expr |*> fun exp2 -> return (Let (id, exp1, exp2)) )
+    input
+
+and match_expr input =
+  ( keyword "match" |>> expr |*> fun e1 ->
+    keyword "with"
+    |>> sep_by (keyword "|")
+          ( pattern <<| arrow |*> fun p ->
+            expr |*> fun exp -> return (p, exp) ) )
+    input
+
+and let_rec_expr =
+  ( keyword "let" |>> keyword "rec" ident |*> fun id ->
+    keyword "=" |>> expr |*> fun exp1 ->
+    keyword "in" |>> expr |*> fun exp2 -> return (Rec (id, exp1, exp2)) )
     input
 
 let run p s =

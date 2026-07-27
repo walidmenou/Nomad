@@ -17,15 +17,24 @@ type binary_op =
   | Geq
   | Greater
 
+type pattern =
+  | PatWildcard
+  | PatVar of ident
+  | PatInt of int
+  | PatBool of bool
+  | PatString of string
+
 type expr =
   | Int of int
   | Bool of bool
   | String of string
   | Unit
-  | Val of ident
+  | Var of ident
   | BinOp of expr * binary_op * expr
   | Let of ident * expr * expr
+  | Rec of ident * expr * expr
   | If of expr * expr * expr
   | Fun of ident * expr
   | App of expr * expr
-  | Rec of ident * expr
+  | List of expr list
+  | Match of expr * (pattern * expr) list
