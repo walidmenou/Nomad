@@ -35,7 +35,10 @@ and some (q : 'a t) : 'a list t =
 
 let map f p = p |*> fun r -> return (f r)
 let maybe p = map (fun r -> Some r) p <|> return None
-let sepby sep p = many (p <<| sep)
+let sepby sep p =
+  ( p |*> fun first ->
+    many (sep |>> p) |*> fun rest -> return (first :: rest) )
+  <|> return []
 let spaces = many (char ' ' <|> char '\n' <|> char '\t')
 let token p = p <<| spaces
 
@@ -145,10 +148,10 @@ let var_pat = ident |*> fun x -> return (PatVar x)
 let int_pat = integer |*> fun i -> return (PatInt i)
 let bool_pat = boolean |*> fun b -> return (PatBool b)
 let string_pat = string |*> fun s -> return (PatString s)
-let pattern = wildcard_pat <|> var_pat <|> int_pat <|> bool_pat <|> string_pat
+let pattern = wildcard_pat <|> bool_pat <|> var_pat <|> int_pat <|> string_pat
 
 let rec expr input =
-  (if_expr <|> fun_expr <|> let_expr <|> cmp_expr <|> match_expr <|> pipe_expr)
+  (if_expr <|> fun_expr <|> let_rec_expr <|> let_expr <|> match_expr <|> pipe_expr <|> cmp_expr)
     input
 
 and cmp_expr input = chain_cmps cmpop arith_expr input
@@ -157,9 +160,9 @@ and add_expr input = chain_left addop mul_expr input
 and mul_expr input = chain_left mulop app_expr input
 
 and pipe_expr input =
-  ( sepby pipe expr |*> function
-    | [] -> none
-    | first :: rest -> return (List.fold_left (fun acc f -> App (f, acc)) first rest) )
+  ( cmp_expr |*> fun first ->
+    some (pipe |>> cmp_expr) |*> fun rest ->
+    return (List.fold_left (fun acc f -> App (f, acc)) first rest) )
     input
 
 and app_expr input =
