@@ -38,7 +38,7 @@ val many : 'a t -> 'a list t
 val some : 'a t -> 'a list t
 (** Repeats the given parser one or more times *)
 
-val sepby : 'a t -> 'b t -> 'a list t
+val sepby : 'a t -> 'b t -> 'b list t
 (** Parses multiple instances of the first parser separated by instances of the
     second parser *)
 
@@ -107,7 +107,7 @@ val arith_expr : expr t
 val mul_expr : expr t
 (** Parses a multiplicative expression *)
 
-val val_expr : expr t
+val var_expr : expr t
 (** Parses a reference to a variable *)
 
 val lit_expr : expr t
@@ -137,8 +137,29 @@ val expr : expr t
 val pipe : unit t
 (** Parse a pipe operator `|>`*)
 
-val pipe_chain : expr t
+val pipe_expr : expr t
 (** Parses chained pipe operations, e.g: `f1 |> f2 |> f3 |> ... |> fn` *)
 
 val match_expr : expr t
 (** Parses a pattern matching expression *)
+
+val wildcard_pat : pattern t
+(** Parses a wildcard pattern `_` *)
+
+val var_pat : pattern t
+(** Parses a variable pattern *)
+
+val int_pat : pattern t
+(** Parses an integer pattern *)
+
+val bool_pat : pattern t
+(** Parses a boolean pattern *)
+
+val string_pat : pattern t
+(** Parses a string pattern *)
+
+val pattern : pattern t
+(** Parses any pattern *)
+
+val let_rec_expr : expr t
+(** Parses a `let rec ... = ... in ...` expression *)

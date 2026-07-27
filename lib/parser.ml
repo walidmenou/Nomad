@@ -3,7 +3,7 @@ open Ast
 
 type 'a t = char list -> ('a * char list) option
 
-let keywords = [ "let"; "in"; "fun"; "if"; "then"; "else" ]
+let keywords = [ "let"; "in"; "fun"; "if"; "then"; "else"; "match"; "with" ]
 let return x = fun input -> Some (x, input)
 let none = fun _ -> None
 
@@ -35,7 +35,7 @@ and some (q : 'a t) : 'a list t =
 
 let map f p = p |*> fun r -> return (f r)
 let maybe p = map (fun r -> Some r) p <|> return None
-let sepby p sep = many (p <<| sep)
+let sepby sep p = many (p <<| sep)
 let spaces = many (char ' ' <|> char '\n' <|> char '\t')
 let token p = p <<| spaces
 
@@ -93,7 +93,7 @@ let string =
   between (char '"') (char '"') (many (satisfies (fun c -> c <> '"')))
   |*> fun cs -> return (ltos cs)
 
-let string_lit = token (string |*> fun s -> String s)
+let string_lit = token (string |*> fun s -> return (String s))
 let var_expr = ident |*> fun x -> return (Var x)
 let lit_expr = int_lit <|> bool_lit <|> unit_lit <|> string_lit
 
@@ -140,11 +140,6 @@ let chain_cmps op_p exp_p =
   |*> fun pairs -> return (cmp_helper first pairs)
 
 let pipe = keyword "|>"
-
-let pipe_chain =
-  sep_by pipe expr |*> fun (first :: rest) ->
-  List.fold_left (fun acc f -> App (f, acc)) first rest
-
 let wildcard_pat = keyword "_" |>> return PatWildcard
 let var_pat = ident |*> fun x -> return (PatVar x)
 let int_pat = integer |*> fun i -> return (PatInt i)
@@ -152,11 +147,20 @@ let bool_pat = boolean |*> fun b -> return (PatBool b)
 let string_pat = string |*> fun s -> return (PatString s)
 let pattern = wildcard_pat <|> var_pat <|> int_pat <|> bool_pat <|> string_pat
 
-let rec expr input = (if_expr <|> fun_expr <|> let_expr <|> cmp_expr) input
+let rec expr input =
+  (if_expr <|> fun_expr <|> let_expr <|> cmp_expr <|> match_expr <|> pipe_expr)
+    input
+
 and cmp_expr input = chain_cmps cmpop arith_expr input
 and arith_expr input = chain_left eqop add_expr input
 and add_expr input = chain_left addop mul_expr input
 and mul_expr input = chain_left mulop app_expr input
+
+and pipe_expr input =
+  ( sepby pipe expr |*> function
+    | [] -> none
+    | first :: rest -> return (List.fold_left (fun acc f -> App (f, acc)) first rest) )
+    input
 
 and app_expr input =
   ( atom_expr |*> fun f ->
@@ -184,15 +188,16 @@ and let_expr input =
     input
 
 and match_expr input =
-  ( keyword "match" |>> expr |*> fun e1 ->
+  ( keyword "match" |>> expr |*> fun exp ->
     keyword "with"
-    |>> sep_by (keyword "|")
+    |>> sepby (keyword "|")
           ( pattern <<| arrow |*> fun p ->
-            expr |*> fun exp -> return (p, exp) ) )
+            expr |*> fun exp -> return (p, exp) )
+    |*> fun pairs -> return (Match (exp, pairs)) )
     input
 
-and let_rec_expr =
-  ( keyword "let" |>> keyword "rec" ident |*> fun id ->
+and let_rec_expr input =
+  ( keyword "let" |>> keyword "rec" |>> ident |*> fun id ->
     keyword "=" |>> expr |*> fun exp1 ->
     keyword "in" |>> expr |*> fun exp2 -> return (Rec (id, exp1, exp2)) )
     input
