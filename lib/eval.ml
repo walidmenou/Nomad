@@ -97,17 +97,17 @@ let eval_stmt env stmt =
       let v = eval env e in
       ((id, v) :: env, Some v)
 
+let rec show_val = function
+  | Int n -> Some (string_of_int n)
+  | Bool b -> Some (string_of_bool b)
+  | String s -> Some ("\"" ^ s ^ "\"")
+  | Unit -> Some "()"
+  | List vs ->
+      let printed_vs = List.filter_map (fun v -> match show_val v with Some s -> Some s | None -> None) vs in
+      Some ("[" ^ String.concat "; " printed_vs ^ "]")
+  | _ -> None
+
 let eval_program stmts =
-  let rec show_val = function
-    | Int n -> Some (string_of_int n)
-    | Bool b -> Some (string_of_bool b)
-    | String s -> Some ("\"" ^ s ^ "\"")
-    | Unit -> Some "()"
-    | List vs ->
-        let printed_vs = List.filter_map (fun v -> match show_val v with Some s -> Some s | None -> None) vs in
-        Some ("[" ^ String.concat "; " printed_vs ^ "]")
-    | _ -> None
-  in
   let rec loop env = function
     | [] -> ()
     | stmt :: rest ->
