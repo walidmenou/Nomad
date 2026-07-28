@@ -1,6 +1,13 @@
 type ident = string
 type literal = Int of int | Bool of bool | String of string | Unit
-type typ = Int | Bool | Unit | Comma | Arrow
+type typ =
+  | TInt
+  | TBool
+  | TString
+  | TUnit
+  | TArrow of typ * typ
+  | TList of typ
+  | TVar of int
 type uop = Negate
 
 type binary_op =
