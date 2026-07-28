@@ -35,10 +35,12 @@ and some (q : 'a t) : 'a list t =
 
 let map f p = p |*> fun r -> return (f r)
 let maybe p = map (fun r -> Some r) p <|> return None
+
 let sepby sep p =
-  ( p |*> fun first ->
-    many (sep |>> p) |*> fun rest -> return (first :: rest) )
+  p
+  |*> (fun first -> many (sep |>> p) |*> fun rest -> return (first :: rest))
   <|> return []
+
 let spaces = many (char ' ' <|> char '\n' <|> char '\t')
 let token p = p <<| spaces
 
@@ -116,7 +118,6 @@ let cmpop =
   <|> (keyword ">" |*> fun _ -> return Greater)
 
 let consop = keyword "::" |*> fun _ -> return Cons
-
 let arrow = keyword "->"
 
 let chain_left op_p exp_p =
@@ -129,8 +130,9 @@ let chain_left op_p exp_p =
 
 let rec chain_right op_p exp_p input =
   ( exp_p |*> fun first ->
-    ( op_p |*> fun op ->
-      chain_right op_p exp_p |*> fun rest -> return (BinOp (first, op, rest)) )
+    op_p
+    |*> (fun op ->
+    chain_right op_p exp_p |*> fun rest -> return (BinOp (first, op, rest)))
     <|> return first )
     input
 
@@ -158,19 +160,23 @@ let var_pat = ident |*> fun x -> return (PatVar x)
 let int_pat = integer |*> fun i -> return (PatInt i)
 let bool_pat = boolean |*> fun b -> return (PatBool b)
 let string_pat = string |*> fun s -> return (PatString s)
-let atom_pat = nil_pat <|> wildcard_pat <|> bool_pat <|> var_pat <|> int_pat <|> string_pat
+
+let atom_pat =
+  nil_pat <|> wildcard_pat <|> bool_pat <|> var_pat <|> int_pat <|> string_pat
 
 let rec chain_right_pat op_p exp_p input =
   ( exp_p |*> fun first ->
-    ( op_p |*> fun _ ->
-      chain_right_pat op_p exp_p |*> fun rest -> return (PatCons (first, rest)) )
+    op_p
+    |*> (fun _ ->
+    chain_right_pat op_p exp_p |*> fun rest -> return (PatCons (first, rest)))
     <|> return first )
     input
 
 let pattern input = chain_right_pat (keyword "::") atom_pat input
 
 let rec expr input =
-  (if_expr <|> fun_expr <|> let_rec_expr <|> let_expr <|> match_expr <|> pipe_expr <|> cons_expr)
+  (if_expr <|> fun_expr <|> let_rec_expr <|> let_expr <|> match_expr
+ <|> pipe_expr <|> cons_expr)
     input
 
 and cons_expr input = chain_right consop cmp_expr input
@@ -193,10 +199,11 @@ and app_expr input =
 
 and list_expr input =
   ( between (token (char '[')) (token (char ']')) (sepby (token (char ';')) expr)
-    |*> fun exprs -> return (List exprs) )
+  |*> fun exprs -> return (List exprs) )
     input
 
-and atom_expr input = (lit_expr <|> var_expr <|> list_expr <|> parenthesized expr) input
+and atom_expr input =
+  (lit_expr <|> var_expr <|> list_expr <|> parenthesized expr) input
 
 and if_expr input =
   ( keyword "if" |>> expr |*> fun exp1 ->
@@ -241,7 +248,6 @@ let rec_stmt input =
     input
 
 let expr_stmt input = (expr |*> fun exp -> return (ExprStmt exp)) input
-
 let statement input = (rec_stmt <|> let_stmt <|> expr_stmt) input
 let program input = many statement input
 
