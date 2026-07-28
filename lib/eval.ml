@@ -2,10 +2,27 @@ open Ast
 
 exception EvaluationError of string
 
+let match_pattern pat v =
+  match (pat, v) with
+  | PatWildcard, _ -> Some []
+  | PatVar id, _ -> Some [ (id, v) ]
+  | PatInt n1, Int n2 when n1 = n2 -> Some []
+  | PatBool b1, Bool b2 when b1 = b2 -> Some []
+  | PatString s1, String s2 when s1 = s2 -> Some []
+  | _, _ -> None
+
+let rec try_match cases v env eval_fn =
+  match cases with
+  | [] -> raise (EvaluationError "Match failure")
+  | (pat, body) :: rest -> (
+      match match_pattern pat v with
+      | Some bindings -> eval_fn (bindings @ env) body
+      | None -> try_match rest v env eval_fn)
+
 let rec eval env e =
   match e with
   | Int _ | Bool _ | String _ | Unit | Fun _ -> e
-  | Val x -> (
+  | Var x -> (
       try List.assoc x env
       with Not_found -> raise (EvaluationError ("Unbound Variable: " ^ x)))
   | BinOp (e1, op, e2) -> (
@@ -49,4 +66,10 @@ let rec eval env e =
       match f with
       | Fun (id, body) -> eval ((id, arg) :: env) body
       | _ -> raise (EvaluationError "Application of non-function"))
-  | Rec _ -> raise (EvaluationError "Rec not fully implemented")
+  | Rec (id, e1, e2) ->
+      let f = eval env e1 in
+      eval ((id, f) :: env) e2
+  | Match (e, cases) ->
+      let v = eval env e in
+      try_match cases v env eval
+  | List exprs -> List (Stdlib.List.map (eval env) exprs)

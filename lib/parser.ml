@@ -205,8 +205,20 @@ and let_rec_expr input =
     keyword "in" |>> expr |*> fun exp2 -> return (Rec (id, exp1, exp2)) )
     input
 
-let statement _ = failwith "unimplemented"
-let program _ = failwith "unimplemented"
+let let_stmt input =
+  ( keyword "let" |>> ident |*> fun id ->
+    keyword "=" |>> expr |*> fun exp -> return (LetStmt (id, exp)) )
+    input
+
+let rec_stmt input =
+  ( keyword "let" |>> keyword "rec" |>> ident |*> fun id ->
+    keyword "=" |>> expr |*> fun exp -> return (RecStmt (id, exp)) )
+    input
+
+let expr_stmt input = (expr |*> fun exp -> return (ExprStmt exp)) input
+
+let statement input = (rec_stmt <|> let_stmt <|> expr_stmt) input
+let program input = many statement input
 
 let run p s =
   match p (explode s) with

@@ -71,8 +71,8 @@ let test_statement () =
   check_parse statement "1 + 1" (ExprStmt (BinOp (Int 1, Add, Int 1))) ()
 
 let test_program () =
-  check_parse program "let x = 1 let y = 2 x + y" 
-    [LetStmt ("x", Int 1); LetStmt ("y", Int 2); ExprStmt (BinOp (Var "x", Add, Var "y"))] ()
+  check_parse program "let x = 1 let y = 2 if true then x + y else 0" 
+    [LetStmt ("x", Int 1); LetStmt ("y", Int 2); ExprStmt (If (Bool true, BinOp (Var "x", Add, Var "y"), Int 0))] ()
 
 let tests = [
   "literals", `Quick, test_lit_expr;
