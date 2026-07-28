@@ -1,0 +1,31 @@
+let rec concat = fun args ->
+  match args with
+  l1 :: l2 :: [] ->
+      (match l1 with
+      [] -> l2
+      | x :: xs -> x :: (concat (xs :: l2 :: [])))
+  | _ -> []
+
+let rec quicksort = fun lst ->
+  match lst with
+  [] -> []
+  | x :: xs ->
+      let rec filter_less = fun l ->
+        match l with
+        [] -> []
+        | y :: ys ->
+            if y <= x then y :: (filter_less ys)
+            else filter_less ys
+      in
+      let rec filter_greater = fun l ->
+        match l with
+        [] -> []
+        | y :: ys ->
+            if y > x then y :: (filter_greater ys)
+            else filter_greater ys
+      in
+      let less = filter_less xs in
+      let greater = filter_greater xs in
+      concat ((quicksort less) :: (x :: quicksort greater) :: [])
+
+let result = quicksort [5; 2; 9; 1; 5; 6]

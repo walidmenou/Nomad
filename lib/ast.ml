@@ -23,6 +23,7 @@ type binary_op =
   | Leq
   | Geq
   | Greater
+  | Cons
 
 type pattern =
   | PatWildcard
@@ -30,6 +31,8 @@ type pattern =
   | PatInt of int
   | PatBool of bool
   | PatString of string
+  | PatCons of pattern * pattern
+  | PatNil
 
 type expr =
   | Int of int

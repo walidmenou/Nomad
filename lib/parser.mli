@@ -113,6 +113,9 @@ val var_expr : expr t
 val lit_expr : expr t
 (** Parses a literal, e.g: 12, true or () *)
 
+val list_expr : expr t
+(** Parses a list expression *)
+
 val atom_expr : expr t
 (** Parses an atomic (i.e irreducile) expression, e.g: `x`, `(<expr>)`, `12` *)
 

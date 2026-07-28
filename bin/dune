@@ -1,4 +1,4 @@
 (executable
  (public_name nomad)
- (name main)
+ (name nomad)
  (libraries nomad))

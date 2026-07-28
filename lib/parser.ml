@@ -115,6 +115,8 @@ let cmpop =
   <|> (keyword "<" |*> fun _ -> return Less)
   <|> (keyword ">" |*> fun _ -> return Greater)
 
+let consop = keyword "::" |*> fun _ -> return Cons
+
 let arrow = keyword "->"
 
 let chain_left op_p exp_p =
@@ -124,6 +126,13 @@ let chain_left op_p exp_p =
       exp_p |*> fun exp -> return (op, exp) )
   |*> fun rs ->
   return (List.fold_left (fun acc (op, exp) -> BinOp (acc, op, exp)) r rs)
+
+let rec chain_right op_p exp_p input =
+  ( exp_p |*> fun first ->
+    ( op_p |*> fun op ->
+      chain_right op_p exp_p |*> fun rest -> return (BinOp (first, op, rest)) )
+    <|> return first )
+    input
 
 let cmp_helper first pairs =
   let cmps, _ =
@@ -143,25 +152,36 @@ let chain_cmps op_p exp_p =
   |*> fun pairs -> return (cmp_helper first pairs)
 
 let pipe = keyword "|>"
+let nil_pat = keyword "[]" |>> return PatNil
 let wildcard_pat = keyword "_" |>> return PatWildcard
 let var_pat = ident |*> fun x -> return (PatVar x)
 let int_pat = integer |*> fun i -> return (PatInt i)
 let bool_pat = boolean |*> fun b -> return (PatBool b)
 let string_pat = string |*> fun s -> return (PatString s)
-let pattern = wildcard_pat <|> bool_pat <|> var_pat <|> int_pat <|> string_pat
+let atom_pat = nil_pat <|> wildcard_pat <|> bool_pat <|> var_pat <|> int_pat <|> string_pat
 
-let rec expr input =
-  (if_expr <|> fun_expr <|> let_rec_expr <|> let_expr <|> match_expr <|> pipe_expr <|> cmp_expr)
+let rec chain_right_pat op_p exp_p input =
+  ( exp_p |*> fun first ->
+    ( op_p |*> fun _ ->
+      chain_right_pat op_p exp_p |*> fun rest -> return (PatCons (first, rest)) )
+    <|> return first )
     input
 
+let pattern input = chain_right_pat (keyword "::") atom_pat input
+
+let rec expr input =
+  (if_expr <|> fun_expr <|> let_rec_expr <|> let_expr <|> match_expr <|> pipe_expr <|> cons_expr)
+    input
+
+and cons_expr input = chain_right consop cmp_expr input
 and cmp_expr input = chain_cmps cmpop arith_expr input
 and arith_expr input = chain_left eqop add_expr input
 and add_expr input = chain_left addop mul_expr input
 and mul_expr input = chain_left mulop app_expr input
 
 and pipe_expr input =
-  ( cmp_expr |*> fun first ->
-    some (pipe |>> cmp_expr) |*> fun rest ->
+  ( cons_expr |*> fun first ->
+    some (pipe |>> cons_expr) |*> fun rest ->
     return (List.fold_left (fun acc f -> App (f, acc)) first rest) )
     input
 
@@ -171,7 +191,12 @@ and app_expr input =
     return (List.fold_left (fun acc arg -> App (acc, arg)) f args) )
     input
 
-and atom_expr input = (lit_expr <|> var_expr <|> parenthesized expr) input
+and list_expr input =
+  ( between (token (char '[')) (token (char ']')) (sepby (token (char ';')) expr)
+    |*> fun exprs -> return (List exprs) )
+    input
+
+and atom_expr input = (lit_expr <|> var_expr <|> list_expr <|> parenthesized expr) input
 
 and if_expr input =
   ( keyword "if" |>> expr |*> fun exp1 ->

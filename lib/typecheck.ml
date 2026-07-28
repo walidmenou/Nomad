@@ -30,6 +30,21 @@ let rec apply_subst s t =
   | TArrow (t1, t2) -> TArrow (apply_subst s t1, apply_subst s t2)
   | TList t' -> TList (apply_subst s t')
 
+let rec string_of_expr = function
+  | Int i -> string_of_int i
+  | Bool b -> string_of_bool b
+  | String s -> "\"" ^ s ^ "\""
+  | Unit -> "()"
+  | Var x -> x
+  | BinOp (e1, _, e2) -> "BinOp(" ^ string_of_expr e1 ^ ", ..., " ^ string_of_expr e2 ^ ")"
+  | If (_, _, _) -> "If(...)"
+  | Fun (x, e) -> "Fun(" ^ x ^ ", " ^ string_of_expr e ^ ")"
+  | App (e1, e2) -> "App(" ^ string_of_expr e1 ^ ", " ^ string_of_expr e2 ^ ")"
+  | Let (_, _, _) -> "Let(...)"
+  | Rec (_, _, _) -> "Rec(...)"
+  | List _ -> "List[...]"
+  | Match (_, _) -> "Match(...)"
+
 let apply_env_subst s env =
   List.map (fun (id, t) -> (id, apply_subst s t)) env
 
@@ -74,14 +89,23 @@ let infer_binop op t1 t2 =
       let s1 = unify t1 TBool in
       let s2 = unify (apply_subst s1 t2) TBool in
       (compose_subst s2 s1, TBool)
+  | Cons ->
+      let s = unify (TList t1) t2 in
+      (s, apply_subst s t2)
 
-let infer_pat pat =
+let rec infer_pat pat =
   match pat with
   | PatWildcard -> ([], new_tvar ())
   | PatVar id -> let t = new_tvar () in ([(id, t)], t)
   | PatInt _ -> ([], TInt)
   | PatBool _ -> ([], TBool)
   | PatString _ -> ([], TString)
+  | PatNil -> ([], TList (new_tvar ()))
+  | PatCons (p1, p2) ->
+      let (b1, t1) = infer_pat p1 in
+      let (b2, t2) = infer_pat p2 in
+      let s = unify t2 (TList t1) in
+      (b1 @ b2, apply_subst s t2)
 
 let rec infer_w env e =
   match e with
@@ -95,17 +119,21 @@ let rec infer_w env e =
   | BinOp (e1, op, e2) ->
       let (s1, t1) = infer_w env e1 in
       let (s2, t2) = infer_w (apply_env_subst s1 env) e2 in
-      let (s3, ret_t) = infer_binop op (apply_subst s2 t1) t2 in
-      (compose_subst s3 (compose_subst s2 s1), ret_t)
+      let s_acc = compose_subst s2 s1 in
+      let (s3, ret_t) = infer_binop op (apply_subst s_acc t1) t2 in
+      (compose_subst s3 s_acc, ret_t)
   | If (cond, e1, e2) ->
       let (s1, tcond) = infer_w env cond in
       let s2 = unify tcond TBool in
-      let env1 = apply_env_subst (compose_subst s2 s1) env in
+      let s_acc1 = compose_subst s2 s1 in
+      let env1 = apply_env_subst s_acc1 env in
       let (s3, t1) = infer_w env1 e1 in
-      let env2 = apply_env_subst s3 env1 in
+      let s_acc2 = compose_subst s3 s_acc1 in
+      let env2 = apply_env_subst s_acc2 env in
       let (s4, t2) = infer_w env2 e2 in
-      let s5 = unify (apply_subst s4 t1) t2 in
-      (compose_subst s5 (compose_subst s4 (compose_subst s3 (compose_subst s2 s1))), apply_subst s5 t2)
+      let s_acc3 = compose_subst s4 s_acc2 in
+      let s5 = unify (apply_subst s_acc3 t1) t2 in
+      (compose_subst s5 s_acc3, apply_subst s5 t2)
   | Fun (id, body) ->
       let t_arg = new_tvar () in
       let (s, t_body) = infer_w ((id, t_arg) :: env) body in
@@ -113,27 +141,34 @@ let rec infer_w env e =
   | App (e1, e2) ->
       let (s1, t1) = infer_w env e1 in
       let (s2, t2) = infer_w (apply_env_subst s1 env) e2 in
+      let s_acc = compose_subst s2 s1 in
       let t_ret = new_tvar () in
-      let s3 = unify (apply_subst s2 t1) (TArrow (t2, t_ret)) in
-      (compose_subst s3 (compose_subst s2 s1), apply_subst s3 t_ret)
+      (try
+        let s3 = unify (apply_subst s_acc t1) (TArrow (t2, t_ret)) in
+        (compose_subst s3 s_acc, apply_subst s3 t_ret)
+      with TypeError err ->
+        raise (TypeError ("In App(" ^ string_of_expr e1 ^ ", " ^ string_of_expr e2 ^ "): " ^ err)))
   | Let (id, e1, e2) ->
       let (s1, t1) = infer_w env e1 in
       let env' = apply_env_subst s1 env in
-      let (s2, t2) = infer_w ((id, t1) :: env') e2 in
+      let (s2, t2) = infer_w ((id, apply_subst s1 t1) :: env') e2 in
       (compose_subst s2 s1, t2)
   | Rec (id, e1, e2) ->
       let t_rec = new_tvar () in
       let (s1, t1) = infer_w ((id, t_rec) :: env) e1 in
-      let s2 = unify (apply_subst s1 t_rec) t1 in
-      let env' = apply_env_subst (compose_subst s2 s1) env in
-      let (s3, t2) = infer_w ((id, apply_subst s2 t1) :: env') e2 in
-      (compose_subst s3 (compose_subst s2 s1), t2)
+      let s2 = unify (apply_subst s1 t_rec) (apply_subst s1 t1) in
+      let s_acc = compose_subst s2 s1 in
+      let env' = apply_env_subst s_acc env in
+      let (s3, t2) = infer_w ((id, apply_subst s_acc t1) :: env') e2 in
+      (compose_subst s3 s_acc, t2)
   | List exprs ->
       let t_elem = new_tvar () in
       let (s_final, _) = List.fold_left (fun (s_acc, env_acc) e ->
         let (s, t) = infer_w env_acc e in
-        let s' = unify t (apply_subst s t_elem) in
-        (compose_subst s' (compose_subst s s_acc), apply_env_subst s' (apply_env_subst s env_acc))
+        let s_acc2 = compose_subst s s_acc in
+        let s' = unify (apply_subst s_acc2 t) (apply_subst s_acc2 t_elem) in
+        let total_s = compose_subst s' s_acc2 in
+        (total_s, apply_env_subst total_s env)
       ) ([], env) exprs in
       (s_final, TList (apply_subst s_final t_elem))
   | Match (e, cases) ->
@@ -144,8 +179,9 @@ let rec infer_w env e =
         let s_pat = unify (apply_subst s_acc t_e) pat_type in
         let env_body = pat_bindings @ (apply_env_subst s_pat env_acc) in
         let (s_body, t_body) = infer_w env_body body in
-        let s_ret = unify (apply_subst s_body (apply_subst s_pat t_ret)) t_body in
-        let total_s = compose_subst s_ret (compose_subst s_body (compose_subst s_pat s_acc)) in
+        let s_acc2 = compose_subst s_body (compose_subst s_pat s_acc) in
+        let s_ret = unify (apply_subst s_acc2 t_ret) t_body in
+        let total_s = compose_subst s_ret s_acc2 in
         (total_s, apply_env_subst total_s env)
       ) (s1, apply_env_subst s1 env) cases in
       (s_final, apply_subst s_final t_ret)
@@ -163,9 +199,10 @@ let check_stmt env stmt =
   | RecStmt (id, e) ->
       let t_rec = new_tvar () in
       let (s1, t1) = infer_w ((id, t_rec) :: env) e in
-      let s2 = unify (apply_subst s1 t_rec) t1 in
-      let final_t = apply_subst s2 t1 in
-      (id, final_t) :: (apply_env_subst (compose_subst s2 s1) env)
+      let s2 = unify (apply_subst s1 t_rec) (apply_subst s1 t1) in
+      let s_acc = compose_subst s2 s1 in
+      let final_t = apply_subst s_acc t1 in
+      (id, final_t) :: (apply_env_subst s_acc env)
 
 let check_program stmts =
   let _ = List.fold_left check_stmt [] stmts in
