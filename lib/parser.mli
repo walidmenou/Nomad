@@ -59,14 +59,17 @@ val integer : int t
 (** Parses an integer (positive or negative) and consumes all spaces that come
     after it *)
 
-val spaces : char list t
-(** Parses a sequence of contiguous whitespace, newlines included. Used between
-    statements, where a newline carries no meaning *)
+val spaces : unit t
+(** Parses whitespace between statements, newlines included, since a newline
+    carries no meaning there. A comment runs from `--` to the end of the line
+    and counts as whitespace too *)
 
 val inline_spaces : unit t
 (** Parses the whitespace that belongs to one statement. A newline is part of it
     only when the line that follows is indented, so a token in the first column
-    always begins a new statement *)
+    always begins a new statement. Blank lines and comment lines are looked past
+    when deciding that, so a comment can sit in the first column without ending
+    the statement above it *)
 
 val token : 'a t -> 'a t
 (** Runs the parser and consumes the whitespace within a statement that comes

@@ -41,18 +41,33 @@ let sepby sep p =
   |*> (fun first -> many (sep |>> p) |*> fun rest -> return (first :: rest))
   <|> return []
 
-let spaces = many (char ' ' <|> char '\n' <|> char '\t')
+let rec skip_comment = function
+  | '\n' :: _ as cs -> cs
+  | _ :: cs -> skip_comment cs
+  | [] -> []
+
+let rec spaces input =
+  match input with
+  | (' ' | '\t' | '\n') :: cs -> spaces cs
+  | '-' :: '-' :: cs -> spaces (skip_comment cs)
+  | _ -> Some ((), input)
 
 let rec inline_spaces input =
   match input with
   | (' ' | '\t') :: cs -> inline_spaces cs
+  | '-' :: '-' :: cs -> inline_spaces (skip_comment cs)
   | '\n' :: cs when indented cs -> inline_spaces cs
   | _ -> Some ((), input)
 
-and indented = function
-  | (' ' | '\t') :: _ -> true
-  | '\n' :: cs -> indented cs
-  | _ -> false
+and indented cs = line_start cs false
+
+and line_start cs seen =
+  match cs with
+  | (' ' | '\t') :: rest -> line_start rest true
+  | '\n' :: rest -> line_start rest false
+  | '-' :: '-' :: rest -> line_start (skip_comment rest) false
+  | [] -> false
+  | _ -> seen
 
 let token p = p <<| inline_spaces
 

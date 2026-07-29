@@ -48,6 +48,15 @@ let test_double_semicolon () =
   check_run "let a = 1 ;;" [ "1" ] ();
   check_run "let a = 1\nlet b = 2 ;;" [ "1"; "2" ] ()
 
+let test_comments () =
+  check_run "let a = 1 -- trailing" [ "1" ] ();
+  check_run "-- a header\nlet a = 1" [ "1" ] ();
+  check_run "let a = 1\n-- between statements\nlet b = 2" [ "1"; "2" ] ();
+  check_run "let a =\n  1 + -- add\n  2" [ "3" ] ();
+  check_run "let a =\n  1 +\n-- in the first column\n  2" [ "3" ] ();
+  check_run "-- nothing at all" [] ();
+  check_run "let s = \"a--b\"" [ "\"a--b\"" ] ()
+
 let test_printing () =
   check_run "let s = \"hi\"" [ "\"hi\"" ] ();
   check_run "let u = ()" [ "()" ] ();
@@ -190,6 +199,7 @@ let tests =
     ("bindings", `Quick, test_bindings);
     ("layout", `Quick, test_layout);
     ("double semicolon", `Quick, test_double_semicolon);
+    ("comments", `Quick, test_comments);
     ("printing", `Quick, test_printing);
     ("arithmetic", `Quick, test_arithmetic);
     ("comparison", `Quick, test_comparison);
