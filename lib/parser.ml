@@ -189,7 +189,7 @@ let wildcard_pat = keyword "_" |>> return PatWildcard
 let var_pat = ident |*> fun x -> return (PatVar x)
 let int_pat = integer |*> fun i -> return (PatInt i)
 let bool_pat = boolean |*> fun b -> return (PatBool b)
-let string_pat = string |*> fun s -> return (PatString s)
+let string_pat = token (string |*> fun s -> return (PatString s))
 
 let atom_pat =
   nil_pat <|> wildcard_pat <|> bool_pat <|> var_pat <|> int_pat <|> string_pat

@@ -101,7 +101,10 @@ let test_pattern () =
   check_parse pattern "x" (PatVar "x") ();
   check_parse pattern "123" (PatInt 123) ();
   check_parse pattern "true" (PatBool true) ();
-  check_parse pattern "\"abc\"" (PatString "abc") ()
+  check_parse pattern "\"abc\"" (PatString "abc") ();
+  check_parse expr "match s with \"a\" -> 1 | _ -> 0"
+    (Match (Var "s", [ (PatString "a", Int 1); (PatWildcard, Int 0) ]))
+    ()
 
 let test_statement () =
   check_parse statement "let x = 1" (LetStmt ("x", Int 1)) ();
