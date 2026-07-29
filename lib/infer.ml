@@ -53,6 +53,12 @@ let infer_binop op t1 t2 =
       let s = Subst.unify (TList t1) t2 in
       (s, Subst.apply s t2)
 
+let join b1 b2 =
+  match List.find_opt (fun (id, _) -> List.mem_assoc id b2) b1 with
+  | Some (id, _) ->
+      raise (Subst.TypeError (id ^ " is bound twice in the same pattern"))
+  | None -> b1 @ b2
+
 let rec infer_pat pat =
   match pat with
   | PatWildcard -> ([], fresh ())
@@ -67,7 +73,7 @@ let rec infer_pat pat =
       let b1, t1 = infer_pat p1 in
       let b2, t2 = infer_pat p2 in
       let s = Subst.unify t2 (TList t1) in
-      (b1 @ b2, Subst.apply s t2)
+      (join b1 b2, Subst.apply s t2)
 
 let rec infer_w env e =
   match e with

@@ -157,6 +157,14 @@ let test_monomorphic_uses () =
   check_type_error "let a = fun f -> if f true then f 1 else 0"
     "In f 1: Type mismatch: bool and int" ()
 
+let test_repeated_pattern_variable () =
+  check_type_error "let a = match [1; 1] with x :: x -> x | _ -> 0"
+    "x is bound twice in the same pattern" ();
+  check_type_error "let a = match [1; 1] with x :: y :: x -> x | _ -> 0"
+    "x is bound twice in the same pattern" ();
+  check_run "let a = match [1; 2] with x :: y :: rest -> x + y | _ -> 0" [ "3" ]
+    ()
+
 let test_conditional () =
   check_run "let a = if true then 1 else 2" [ "1" ] ();
   check_run "let a = if 1 < 0 then 1 else 2" [ "2" ] ();
@@ -251,6 +259,7 @@ let tests =
     ("precedence", `Quick, test_precedence);
     ("polymorphism", `Quick, test_polymorphism);
     ("monomorphic uses", `Quick, test_monomorphic_uses);
+    ("repeated pattern variable", `Quick, test_repeated_pattern_variable);
     ("conditional", `Quick, test_conditional);
     ("let", `Quick, test_let);
     ("application", `Quick, test_application);
