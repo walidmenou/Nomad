@@ -113,15 +113,21 @@ let rec show_val = function
       Some ("[" ^ String.concat "; " printed_vs ^ "]")
   | _ -> None
 
-let eval_program stmts =
-  let rec loop env = function
-    | [] -> ()
+(* The lines a program prints, in order. Kept separate from [eval_program] so a
+   test can compare against them without capturing stdout. *)
+let run_program stmts =
+  let rec loop env printed = function
+    | [] -> List.rev printed
     | stmt :: rest ->
         let env', res = eval_stmt env stmt in
-        (match res with
-        | Some v -> (
-            match show_val v with Some s -> print_endline s | None -> ())
-        | None -> ());
-        loop env' rest
+        let printed =
+          match res with
+          | Some v -> (
+              match show_val v with Some s -> s :: printed | None -> printed)
+          | None -> printed
+        in
+        loop env' printed rest
   in
-  loop [] stmts
+  loop [] [] stmts
+
+let eval_program stmts = List.iter print_endline (run_program stmts)

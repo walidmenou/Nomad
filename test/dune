@@ -1,3 +1,5 @@
 (test
  (name test_nomad)
- (libraries alcotest nomad))
+ (libraries alcotest nomad)
+ (deps
+  (glob_files ../examples/*.nd)))
