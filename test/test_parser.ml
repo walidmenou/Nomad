@@ -42,6 +42,29 @@ let test_cmp_expr () =
     (BinOp (BinOp (Int 1, Less, Int 2), And, BinOp (Int 2, Less, Int 3)))
     ()
 
+(* Pins the shape each operator level gives, loosest first. *)
+let test_precedence () =
+  check_parse expr "a || b && c"
+    (BinOp (Var "a", Or, BinOp (Var "b", And, Var "c")))
+    ();
+  check_parse expr "a < b && c < d"
+    (BinOp (BinOp (Var "a", Less, Var "b"), And, BinOp (Var "c", Less, Var "d")))
+    ();
+  (* Cons binds tighter than equality, so the left operand is the whole list. *)
+  check_parse expr "x :: xs = ys"
+    (BinOp (BinOp (Var "x", Cons, Var "xs"), Equal, Var "ys"))
+    ();
+  (* A pipeline is one operand of the comparison around it. *)
+  check_parse expr "x |> f > 0"
+    (BinOp (App (Var "f", Var "x"), Greater, Int 0))
+    ();
+  (* Equality chains like any other comparison. *)
+  check_parse expr "a = b = c"
+    (BinOp
+       (BinOp (Var "a", Equal, Var "b"), And, BinOp (Var "b", Equal, Var "c")))
+    ();
+  check_parse expr "a <> b" (BinOp (Var "a", Diff, Var "b")) ()
+
 let test_let_expr () =
   check_parse expr "let x = 1 in x" (Let ("x", Int 1, Var "x")) ()
 
@@ -97,6 +120,7 @@ let tests =
     ("variables", `Quick, test_var_expr);
     ("arithmetic", `Quick, test_arith_expr);
     ("comparisons", `Quick, test_cmp_expr);
+    ("precedence", `Quick, test_precedence);
     ("let", `Quick, test_let_expr);
     ("let rec", `Quick, test_let_rec_expr);
     ("if", `Quick, test_if_expr);

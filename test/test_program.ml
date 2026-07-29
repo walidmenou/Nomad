@@ -81,6 +81,28 @@ let test_function_equality () =
   check_eval_error "let f = fun x -> x\nlet a = [f] = [f]"
     "Cannot compare functions" ()
 
+let test_connectives () =
+  check_run "let a = true && false" [ "false" ] ();
+  check_run "let a = true || false" [ "true" ] ();
+  check_run "let a = 1 <> 2" [ "true" ] ();
+  check_run "let a = [1] <> [1]" [ "false" ] ();
+  (* && binds tighter than ||, so this reads true || (false && false). *)
+  check_run "let a = true || false && false" [ "true" ] ();
+  (* Comparison binds tighter than &&. *)
+  check_run "let a = 1 < 2 && 3 < 4" [ "true" ] ()
+
+let test_precedence () =
+  (* Cons binds tighter than equality, so this compares two lists. *)
+  check_run "let l = [2]\nlet a = 1 :: l = [1; 2]" [ "[2]"; "true" ] ();
+  (* A run of equalities chains like any other comparison. *)
+  check_run "let a = 1 = 1 = 1" [ "true" ] ();
+  check_run "let a = 1 = 1 = 2" [ "false" ] ();
+  (* A pipeline is one operand of the comparison around it. *)
+  check_run
+    "let rec len = fun l -> match l with [] -> 0 | x :: xs -> 1 + len xs\n\
+     let a = [1; 2; 3] |> len > 0"
+    [ "<fun>"; "true" ] ()
+
 let test_conditional () =
   check_run "let a = if true then 1 else 2" [ "1" ] ();
   check_run "let a = if 1 < 0 then 1 else 2" [ "2" ] ();
@@ -174,6 +196,8 @@ let tests =
     ("comparison", `Quick, test_comparison);
     ("equality", `Quick, test_equality);
     ("function equality", `Quick, test_function_equality);
+    ("connectives", `Quick, test_connectives);
+    ("precedence", `Quick, test_precedence);
     ("conditional", `Quick, test_conditional);
     ("let", `Quick, test_let);
     ("application", `Quick, test_application);

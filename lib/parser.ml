@@ -108,14 +108,19 @@ let addop =
 let mulop =
   keyword "*" |*> (fun _ -> return Mul) <|> (keyword "/" |*> fun _ -> return Div)
 
-let eqop = keyword "=" |*> fun _ -> return Equal
+let orop = keyword "||" |*> fun _ -> return Or
+let andop = keyword "&&" |*> fun _ -> return And
 
+(* Two-character operators come first, so that <= is never read as < followed
+   by =. *)
 let cmpop =
   keyword "<="
   |*> (fun _ -> return Leq)
   <|> (keyword ">=" |*> fun _ -> return Geq)
+  <|> (keyword "<>" |*> fun _ -> return Diff)
   <|> (keyword "<" |*> fun _ -> return Less)
   <|> (keyword ">" |*> fun _ -> return Greater)
+  <|> (keyword "=" |*> fun _ -> return Equal)
 
 let consop = keyword "::" |*> fun _ -> return Cons
 let arrow = keyword "->"
@@ -174,20 +179,24 @@ let rec chain_right_pat op_p exp_p input =
 
 let pattern input = chain_right_pat (keyword "::") atom_pat input
 
+(* One parser per precedence level, each written in terms of the level that
+   binds tighter, loosest first. *)
 let rec expr input =
-  (if_expr <|> fun_expr <|> let_rec_expr <|> let_expr <|> match_expr
- <|> pipe_expr <|> cons_expr)
+  (if_expr <|> fun_expr <|> let_rec_expr <|> let_expr <|> match_expr <|> or_expr)
     input
 
-and cons_expr input = chain_right consop cmp_expr input
-and cmp_expr input = chain_cmps cmpop arith_expr input
-and arith_expr input = chain_left eqop add_expr input
+and or_expr input = chain_left orop and_expr input
+and and_expr input = chain_left andop cmp_expr input
+and cmp_expr input = chain_cmps cmpop pipe_expr input
+and cons_expr input = chain_right consop add_expr input
 and add_expr input = chain_left addop mul_expr input
 and mul_expr input = chain_left mulop app_expr input
 
+(* Sits above cons and below comparison, so that a whole pipeline is one
+   operand of the comparison around it. *)
 and pipe_expr input =
   ( cons_expr |*> fun first ->
-    some (pipe |>> cons_expr) |*> fun rest ->
+    many (pipe |>> cons_expr) |*> fun rest ->
     return (List.fold_left (fun acc f -> App (f, acc)) first rest) )
     input
 

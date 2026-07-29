@@ -101,8 +101,17 @@ val mulop : binary_op t
 val chain_left : binary_op t -> expr t -> expr t
 (** Parses a chain of expressions separated by the given operator type *)
 
-val arith_expr : expr t
-(** Parses an arithmetic expression *)
+val or_expr : expr t
+(** Parses a chain of disjunctions, the loosest operator level *)
+
+val and_expr : expr t
+(** Parses a chain of conjunctions *)
+
+val cons_expr : expr t
+(** Parses a chain of conses, e.g: `1 :: 2 :: []` *)
+
+val add_expr : expr t
+(** Parses an additive expression *)
 
 val mul_expr : expr t
 (** Parses a multiplicative expression *)
