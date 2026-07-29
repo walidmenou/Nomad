@@ -9,22 +9,6 @@ let fresh () =
   counter := v + 1;
   TVar v
 
-let rec string_of_expr = function
-  | Int i -> string_of_int i
-  | Bool b -> string_of_bool b
-  | String s -> "\"" ^ s ^ "\""
-  | Unit -> "()"
-  | Var x -> x
-  | BinOp (e1, _, e2) ->
-      "BinOp(" ^ string_of_expr e1 ^ ", ..., " ^ string_of_expr e2 ^ ")"
-  | If (_, _, _) -> "If(...)"
-  | Fun (x, e) -> "Fun(" ^ x ^ ", " ^ string_of_expr e ^ ")"
-  | App (e1, e2) -> "App(" ^ string_of_expr e1 ^ ", " ^ string_of_expr e2 ^ ")"
-  | Let (_, _, _) -> "Let(...)"
-  | Rec (_, _, _) -> "Rec(...)"
-  | List _ -> "List[...]"
-  | Match (_, _) -> "Match(...)"
-
 let infer_binop op t1 t2 =
   match op with
   | Add | Sub | Mul | Div ->
@@ -97,10 +81,7 @@ let rec infer_w env e =
         let s3 = Subst.unify (Subst.apply s_acc t1) (TArrow (t2, t_ret)) in
         (Subst.compose s3 s_acc, Subst.apply s3 t_ret)
       with Subst.TypeError err ->
-        raise
-          (Subst.TypeError
-             ("In App(" ^ string_of_expr e1 ^ ", " ^ string_of_expr e2 ^ "): "
-            ^ err)))
+        raise (Subst.TypeError ("In " ^ string_of_expr e ^ ": " ^ err)))
   | Let (id, e1, e2) ->
       let s1, t1 = infer_w env e1 in
       let env' = Subst.apply_env s1 env in

@@ -108,10 +108,31 @@ let test_errors () =
     "Type mismatch: int and bool" ();
   check_error []
     (App (Fun ("x", BinOp (Var "x", Add, Int 1)), Bool true))
-    "In App(Fun(x, BinOp(x, ..., 1)), true): Type mismatch: int and bool" ();
+    "In (fun x -> x + 1) true: Type mismatch: int and bool" ();
   check_error []
     (Fun ("x", App (Var "x", Var "x")))
-    "In App(x, x): Recursive types not supported" ()
+    "In x x: Recursive types not supported" ()
+
+(* string_of_expr prints Nomad source, so an error can quote the program back. *)
+let test_printer () =
+  let shows e expected =
+    Alcotest.(check string) "printed" expected (string_of_expr e)
+  in
+  shows
+    (Match
+       ( Var "l",
+         [ (PatNil, Int 0); (PatCons (PatVar "x", PatVar "xs"), Var "x") ] ))
+    "match l with [] -> 0 | x :: xs -> x";
+  shows (Let ("x", Int 1, BinOp (Var "x", Add, Int 2))) "let x = 1 in x + 2";
+  shows
+    (Rec ("f", Fun ("n", Var "n"), App (Var "f", Int 1)))
+    "let rec f = fun n -> n in f 1";
+  shows
+    (If (BinOp (Var "n", Leq, Int 0), Bool true, Bool false))
+    "if n <= 0 then true else false";
+  shows (List [ Int 1; BinOp (Int 2, Mul, Int 3) ]) "[1; 2 * 3]";
+  (* Compound operands are parenthesised, so the output stays unambiguous *)
+  shows (BinOp (Int 1, Sub, BinOp (Int 2, Sub, Int 3))) "1 - (2 - 3)"
 
 let tests =
   [
@@ -127,4 +148,5 @@ let tests =
     ("cons", `Quick, test_cons);
     ("match", `Quick, test_match);
     ("errors", `Quick, test_errors);
+    ("printer", `Quick, test_printer);
   ]
