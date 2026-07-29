@@ -41,14 +41,14 @@ let rec eval env e =
   | Var x -> (
       try List.assoc x env
       with Not_found -> raise (EvaluationError ("Unbound Variable: " ^ x)))
+  (* A connective looks at its right operand only when the left has not already
+     settled the answer, so a guard can protect what follows it. *)
+  | BinOp (e1, And, e2) -> if truth env e1 then eval env e2 else VBool false
+  | BinOp (e1, Or, e2) -> if truth env e1 then VBool true else eval env e2
   | BinOp (e1, op, e2) -> binop op (eval env e1) (eval env e2)
   | Let (id, e1, e2) -> eval ((id, eval env e1) :: env) e2
   | Rec (id, e1, e2) -> eval ((id, rec_value env id e1) :: env) e2
-  | If (cond, e1, e2) -> (
-      match eval env cond with
-      | VBool true -> eval env e1
-      | VBool false -> eval env e2
-      | _ -> raise (EvaluationError "Condition must be a boolean"))
+  | If (cond, e1, e2) -> if truth env cond then eval env e1 else eval env e2
   | App (e1, e2) -> apply (eval env e1) (eval env e2)
   | List exprs -> VList (List.map (eval env) exprs)
   | Match (e, cases) -> try_match env cases (eval env e)
@@ -79,6 +79,11 @@ and try_match env cases v =
       | Some bindings -> eval (bindings @ env) body
       | None -> try_match env rest v)
 
+and truth env e =
+  match eval env e with
+  | VBool b -> b
+  | _ -> raise (EvaluationError "Expected a boolean")
+
 and binop op v1 v2 =
   match (op, v1, v2) with
   | Add, VInt a, VInt b -> VInt (a + b)
@@ -90,8 +95,6 @@ and binop op v1 v2 =
   | Leq, VInt a, VInt b -> VBool (a <= b)
   | Greater, VInt a, VInt b -> VBool (a > b)
   | Geq, VInt a, VInt b -> VBool (a >= b)
-  | And, VBool a, VBool b -> VBool (a && b)
-  | Or, VBool a, VBool b -> VBool (a || b)
   | Cons, v, VList vs -> VList (v :: vs)
   | Equal, _, _ -> VBool (equal v1 v2)
   | Diff, _, _ -> VBool (not (equal v1 v2))

@@ -91,6 +91,16 @@ let test_connectives () =
   (* Comparison binds tighter than &&. *)
   check_run "let a = 1 < 2 && 3 < 4" [ "true" ] ()
 
+(* The right operand runs only when the left has not already settled the
+   answer, so a guard can protect what follows it. *)
+let test_short_circuit () =
+  check_run "let a = false && 1 / 0 = 0" [ "false" ] ();
+  check_run "let a = true || 1 / 0 = 0" [ "true" ] ();
+  (* The right operand still runs when the left leaves the answer open. *)
+  check_run "let a = true && 1 = 1" [ "true" ] ();
+  check_run "let a = false || 1 = 2" [ "false" ] ();
+  check_eval_error "let a = true && 1 / 0 = 0" "Division by zero" ()
+
 let test_precedence () =
   (* Cons binds tighter than equality, so this compares two lists. *)
   check_run "let l = [2]\nlet a = 1 :: l = [1; 2]" [ "[2]"; "true" ] ();
@@ -197,6 +207,7 @@ let tests =
     ("equality", `Quick, test_equality);
     ("function equality", `Quick, test_function_equality);
     ("connectives", `Quick, test_connectives);
+    ("short circuit", `Quick, test_short_circuit);
     ("precedence", `Quick, test_precedence);
     ("conditional", `Quick, test_conditional);
     ("let", `Quick, test_let);
