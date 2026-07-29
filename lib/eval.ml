@@ -45,6 +45,7 @@ let rec eval env e =
   | If (cond, e1, e2) -> if truth env cond then eval env e1 else eval env e2
   | App (e1, e2) -> apply (eval env e1) (eval env e2)
   | List exprs -> VList (List.map (eval env) exprs)
+  | Comp (body, qs) -> VList (List.rev (comp env qs body []))
   | Range (e1, e2) -> (
       match (eval env e1, eval env e2) with
       | VInt lo, VInt hi ->
@@ -70,6 +71,20 @@ and try_match env cases v =
       match match_pattern pat v with
       | Some bindings -> eval (bindings @ env) body
       | None -> try_match env rest v)
+
+and comp env qs body acc =
+  match qs with
+  | [] -> eval env body :: acc
+  | Gen (p, src) :: rest -> (
+      match eval env src with
+      | VList vs ->
+          List.fold_left
+            (fun acc v ->
+              match match_pattern p v with
+              | Some bindings -> comp (bindings @ env) rest body acc
+              | None -> acc)
+            acc vs
+      | _ -> raise (EvaluationError "A generator needs a list"))
 
 and truth env e =
   match eval env e with

@@ -234,6 +234,19 @@ and app_expr input =
     return (List.fold_left (fun acc arg -> App (acc, arg)) f args) )
     input
 
+and generator input =
+  ( pattern <<| keyword "<-" |*> fun p ->
+    expr |*> fun src -> return (Gen (p, src)) )
+    input
+
+and qualifier input = generator input
+
+and comp_body input =
+  ( expr |*> fun body ->
+    keyword "|" |>> sepby (token (char ',')) qualifier |*> fun qs ->
+    if qs = [] then none else return (Comp (body, qs)) )
+    input
+
 and range_body input =
   ( expr |*> fun lo ->
     keyword ".." |>> expr |*> fun hi -> return (Range (lo, hi)) )
@@ -243,7 +256,11 @@ and list_body input =
   (sepby (token (char ';')) expr |*> fun exprs -> return (List exprs)) input
 
 and list_expr input =
-  between (token (char '[')) (token (char ']')) (range_body <|> list_body) input
+  between
+    (token (char '['))
+    (token (char ']'))
+    (comp_body <|> range_body <|> list_body)
+    input
 
 and atom_expr input =
   (lit_expr <|> var_expr <|> list_expr <|> parenthesized expr) input

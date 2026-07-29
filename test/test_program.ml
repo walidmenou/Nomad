@@ -22,6 +22,12 @@ let check_type_error src expected () =
   | exception Subst.TypeError e ->
       Alcotest.(check string) "error message" expected e
 
+let check_type_fails src () =
+  match run src with
+  | _ -> Alcotest.fail "expected a type error"
+  | exception Subst.TypeError _ ->
+      Alcotest.(check bool) "failed as expected" true true
+
 let read_file path =
   let ic = open_in path in
   let s = really_input_string ic (in_channel_length ic) in
@@ -65,6 +71,42 @@ let test_range () =
   check_run "let n = 4\nlet a = [1..n - 1]" [ "4"; "[1; 2; 3]" ] ();
   check_run "let a = 0 :: [1..3]" [ "[0; 1; 2; 3]" ] ();
   check_type_error "let a = [1..true]" "Type mismatch: bool and int" ()
+
+let test_comprehension () =
+  check_run "let a = [x | x <- [1; 2; 3]]" [ "[1; 2; 3]" ] ();
+  check_run "let a = [x * x | x <- [1..4]]" [ "[1; 4; 9; 16]" ] ();
+  check_run "let xs = [1; 2]\nlet a = [x + 1 | x <- xs]" [ "[1; 2]"; "[2; 3]" ]
+    ();
+  check_run "let a = [\"s\" | x <- [1; 2]]" [ "[\"s\"; \"s\"]" ] ();
+  check_run "let a = [x | x <- []]" [ "[]" ] ()
+
+let test_nested_generators () =
+  check_run "let a = [x * 10 + y | x <- [1; 2], y <- [3; 4]]"
+    [ "[13; 14; 23; 24]" ] ();
+  check_run "let a = [[x; y] | x <- [1; 2], y <- [3]]" [ "[[1; 3]; [2; 3]]" ] ();
+  check_run "let a = [x + y | x <- [1..3], y <- [1..x]]"
+    [ "[2; 3; 4; 4; 5; 6]" ] ();
+  check_run "let a = [x | x <- [1; 2], y <- []]" [ "[]" ] ()
+
+let test_generator_patterns () =
+  check_run "let a = [x | x :: r <- [[1; 2]; [3]]]" [ "[1; 3]" ] ();
+  check_run "let a = [x | x :: r <- [[1]; []; [3]]]" [ "[1; 3]" ] ();
+  check_run "let a = [1 | [] <- [[1]; []; []]]" [ "[1; 1]" ] ()
+
+let test_comprehension_body () =
+  check_run "let a = [match x with 0 -> 9 | n -> n | x <- [0; 1; 2]]"
+    [ "[9; 1; 2]" ] ();
+  check_run "let a = [if x < 2 then 0 else x | x <- [1..3]]" [ "[0; 2; 3]" ] ();
+  check_run "let a = [x > 1 && x < 3 | x <- [1..3]]" [ "[false; true; false]" ]
+    ();
+  check_run "let n = 3\nlet a = [[0 | j <- [1..n]] | i <- [1..n]]"
+    [ "3"; "[[0; 0; 0]; [0; 0; 0]; [0; 0; 0]]" ]
+    ()
+
+let test_comprehension_types () =
+  check_type_fails "let a = [x | x <- 5]" ();
+  check_type_error "let a = [x + 1 | x <- [true]]" "Type mismatch: bool and int"
+    ()
 
 let test_printing () =
   check_run "let s = \"hi\"" [ "\"hi\"" ] ();
@@ -305,6 +347,11 @@ let tests =
     ("double semicolon", `Quick, test_double_semicolon);
     ("comments", `Quick, test_comments);
     ("range", `Quick, test_range);
+    ("comprehension", `Quick, test_comprehension);
+    ("nested generators", `Quick, test_nested_generators);
+    ("generator patterns", `Quick, test_generator_patterns);
+    ("comprehension body", `Quick, test_comprehension_body);
+    ("comprehension types", `Quick, test_comprehension_types);
     ("printing", `Quick, test_printing);
     ("arithmetic", `Quick, test_arithmetic);
     ("unary minus", `Quick, test_unary_minus);

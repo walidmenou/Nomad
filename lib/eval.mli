@@ -22,7 +22,13 @@ and env = (ident * value) list
 val eval : env -> expr -> value
 (** The value of an expression, raising [EvaluationError] if it has none.
     Operands are evaluated left to right, except that [&&] and [||] look at the
-    right one only when the left has not already settled the answer *)
+    right one only when the left has not already settled the answer.
+
+    A comprehension runs its qualifiers left to right and nests them, so the
+    leftmost generator is the outer loop and a later qualifier sees every name
+    an earlier one bound. A generator pattern that a value does not match skips
+    that value rather than failing. The language is strict, so the whole result
+    is built before anything else happens *)
 
 val eval_stmt : env -> statement -> env * value
 (** Evaluates a statement and returns the environment the next one runs in,

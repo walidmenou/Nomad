@@ -48,7 +48,10 @@ type expr =
   | App of expr * expr
   | List of expr list
   | Range of expr * expr
+  | Comp of expr * qualifier list
   | Match of expr * (pattern * expr) list
+
+and qualifier = Gen of pattern * expr
 
 type statement =
   | LetStmt of ident * expr
@@ -108,13 +111,20 @@ let rec string_of_expr = function
       "let rec " ^ id ^ " = " ^ string_of_expr e1 ^ " in " ^ string_of_expr e2
   | List exprs -> "[" ^ String.concat "; " (List.map string_of_expr exprs) ^ "]"
   | Range (e1, e2) -> "[" ^ string_of_expr e1 ^ ".." ^ string_of_expr e2 ^ "]"
+  | Comp (e, qs) ->
+      "[" ^ string_of_expr e ^ " | "
+      ^ String.concat ", " (List.map string_of_qual qs)
+      ^ "]"
   | Match (e, cases) ->
       let case (pat, body) = string_of_pat pat ^ " -> " ^ string_of_expr body in
       "match " ^ string_of_expr e ^ " with "
       ^ String.concat " | " (List.map case cases)
 
+and string_of_qual = function
+  | Gen (p, e) -> string_of_pat p ^ " <- " ^ string_of_expr e
+
 and atom e =
   match e with
-  | Int _ | Bool _ | String _ | Unit | Var _ | List _ | Range _ ->
+  | Int _ | Bool _ | String _ | Unit | Var _ | List _ | Range _ | Comp _ ->
       string_of_expr e
   | _ -> "(" ^ string_of_expr e ^ ")"

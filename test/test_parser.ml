@@ -105,6 +105,23 @@ let test_range () =
   check_parse expr "[1; 2]" (List [ Int 1; Int 2 ]) ();
   check_parse expr "[]" (List []) ()
 
+let test_comprehension () =
+  check_parse expr "[x | x <- xs]"
+    (Comp (Var "x", [ Gen (PatVar "x", Var "xs") ]))
+    ();
+  check_parse expr "[x + y | x <- xs, y <- ys]"
+    (Comp
+       ( BinOp (Var "x", Add, Var "y"),
+         [ Gen (PatVar "x", Var "xs"); Gen (PatVar "y", Var "ys") ] ))
+    ();
+  check_parse expr "[x | h :: t <- xss]"
+    (Comp (Var "x", [ Gen (PatCons (PatVar "h", PatVar "t"), Var "xss") ]))
+    ();
+  check_parse expr "[x | x <- [1..3]]"
+    (Comp (Var "x", [ Gen (PatVar "x", Range (Int 1, Int 3)) ]))
+    ();
+  check_parse expr "[a < b]" (List [ BinOp (Var "a", Less, Var "b") ]) ()
+
 let test_app_expr () =
   check_parse expr "f x" (App (Var "f", Var "x")) ();
   check_parse expr "f x y" (App (App (Var "f", Var "x"), Var "y")) ()
@@ -158,6 +175,7 @@ let tests =
     ("functions", `Quick, test_fun_expr);
     ("multi argument", `Quick, test_multi_argument);
     ("range", `Quick, test_range);
+    ("comprehension", `Quick, test_comprehension);
     ("applications", `Quick, test_app_expr);
     ("pipe", `Quick, test_pipe_expr);
     ("match", `Quick, test_match_expr);

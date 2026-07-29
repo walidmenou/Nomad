@@ -134,6 +134,12 @@ let rec infer_w env e =
           [] exprs
       in
       (s, TList (Subst.apply s t_elem))
+  | Comp (body, qs) ->
+      let s, env =
+        List.fold_left (fun (s, env) q -> infer_qual s env q) ([], env) qs
+      in
+      let s, t = step s env body in
+      (s, TList (Subst.apply s t))
   | Range (e1, e2) ->
       let s1, t1 = infer_w env e1 in
       let s = Subst.compose (Subst.unify t1 TInt) s1 in
@@ -158,6 +164,17 @@ let rec infer_w env e =
       if not (Pat.exhaustive (Subst.apply s t_e) (List.map fst cases)) then
         raise (Subst.TypeError "This match is not exhaustive");
       (s, Subst.apply s t_ret)
+
+and infer_qual s env q =
+  match q with
+  | Gen (p, src) ->
+      let s, t_src = step s env src in
+      let bindings, t_pat = infer_pat p in
+      let s = Subst.compose (Subst.unify t_src (TList t_pat)) s in
+      let bound =
+        List.map (fun (id, t) -> (id, mono (Subst.apply s t))) bindings
+      in
+      (s, bound @ apply_env s env)
 
 and step s env e =
   let s', t = infer_w (apply_env s env) e in
