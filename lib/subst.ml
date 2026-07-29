@@ -12,7 +12,6 @@ let rec apply s t =
   | TArrow (t1, t2) -> TArrow (apply s t1, apply s t2)
   | TList t' -> TList (apply s t')
 
-let apply_env s env = List.map (fun (id, t) -> (id, apply s t)) env
 let compose s1 s2 = s1 @ List.map (fun (v, t) -> (v, apply s1 t)) s2
 
 let rec unify t1 t2 =

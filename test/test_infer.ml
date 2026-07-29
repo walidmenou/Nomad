@@ -34,7 +34,7 @@ let test_lit () =
   check_type [] Unit TUnit ()
 
 let test_var () =
-  check_type [ ("x", TInt) ] (Var "x") TInt ();
+  check_type [ ("x", mono TInt) ] (Var "x") TInt ();
   check_fail [] (Var "x") ()
 
 let test_binop () =
@@ -62,6 +62,22 @@ let test_app () =
 let test_let () =
   check_type [] (Let ("x", Int 1, BinOp (Var "x", Add, Int 2))) TInt ();
   check_type [] (Let ("f", Fun ("x", Var "x"), App (Var "f", Int 1))) TInt ()
+
+let poly_use = If (App (Var "f", Bool true), App (Var "f", Int 1), Int 0)
+
+let test_generalisation () =
+  check_type [] (Let ("f", Fun ("x", Var "x"), poly_use)) TInt ();
+  check_fail [] (Fun ("f", poly_use)) ();
+  check_type []
+    (Fun
+       ( "y",
+         Let
+           ( "f",
+             Fun ("x", Var "x"),
+             BinOp (App (Var "f", Var "y"), Add, poly_use) ) ))
+    (TArrow (TInt, TInt))
+    ();
+  check_type [] (Rec ("f", Fun ("x", Var "x"), poly_use)) TInt ()
 
 let test_rec () =
   check_type [] (Rec ("f", fact, Var "f")) (TArrow (TInt, TInt)) ();
@@ -136,6 +152,7 @@ let tests =
     ("functions", `Quick, test_fun);
     ("applications", `Quick, test_app);
     ("let", `Quick, test_let);
+    ("generalisation", `Quick, test_generalisation);
     ("let rec", `Quick, test_rec);
     ("lists", `Quick, test_list);
     ("cons", `Quick, test_cons);

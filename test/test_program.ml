@@ -134,6 +134,29 @@ let test_precedence () =
      let a = [1; 2; 3] |> len > 0"
     [ "<fun>"; "true" ] ()
 
+let test_polymorphism () =
+  check_run "let a = let id = fun x -> x in if id true then id 1 else 0" [ "1" ]
+    ();
+  check_run
+    "let a =\n\
+    \  let rec len = fun l -> match l with [] -> 0 | x :: xs -> 1 + len xs in\n\
+    \  len [1; 2] + len [\"a\"]"
+    [ "3" ] ();
+  check_run
+    "let id = fun x -> x\nlet a = id 1\nlet b = id true\nlet c = id \"s\""
+    [ "<fun>"; "1"; "true"; "\"s\"" ]
+    ();
+  check_run "let e = []\nlet a = 1 :: e\nlet b = true :: e"
+    [ "[]"; "[1]"; "[true]" ] ()
+
+let test_monomorphic_uses () =
+  check_type_error "let a = let f = fun x -> x + 1 in f true"
+    "In f true: Type mismatch: int and bool" ();
+  check_type_error "let f = fun x -> x + 1\nlet a = f true"
+    "In f true: Type mismatch: int and bool" ();
+  check_type_error "let a = fun f -> if f true then f 1 else 0"
+    "In f 1: Type mismatch: bool and int" ()
+
 let test_conditional () =
   check_run "let a = if true then 1 else 2" [ "1" ] ();
   check_run "let a = if 1 < 0 then 1 else 2" [ "2" ] ();
@@ -226,6 +249,8 @@ let tests =
     ("connectives", `Quick, test_connectives);
     ("short circuit", `Quick, test_short_circuit);
     ("precedence", `Quick, test_precedence);
+    ("polymorphism", `Quick, test_polymorphism);
+    ("monomorphic uses", `Quick, test_monomorphic_uses);
     ("conditional", `Quick, test_conditional);
     ("let", `Quick, test_let);
     ("application", `Quick, test_application);

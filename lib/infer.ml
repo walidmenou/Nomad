@@ -1,6 +1,7 @@
 open Ast
 
-type env = (ident * typ) list
+type scheme = Forall of int list * typ
+type env = (ident * scheme) list
 
 let counter = ref 0
 
@@ -8,6 +9,28 @@ let fresh () =
   let v = !counter in
   counter := v + 1;
   TVar v
+
+let rec vars = function
+  | TVar v -> [ v ]
+  | TArrow (t1, t2) -> vars t1 @ vars t2
+  | TList t -> vars t
+  | _ -> []
+
+let mono t = Forall ([], t)
+let free (Forall (qs, t)) = List.filter (fun v -> not (List.mem v qs)) (vars t)
+
+let apply_scheme s (Forall (qs, t)) =
+  Forall (qs, Subst.apply (List.filter (fun (v, _) -> not (List.mem v qs)) s) t)
+
+let apply_env s env = List.map (fun (id, sc) -> (id, apply_scheme s sc)) env
+
+let generalize env t =
+  let bound = List.concat_map (fun (_, sc) -> free sc) env in
+  let loose = List.filter (fun v -> not (List.mem v bound)) (vars t) in
+  Forall (List.sort_uniq compare loose, t)
+
+let instantiate (Forall (qs, t)) =
+  Subst.apply (List.map (fun v -> (v, fresh ())) qs) t
 
 let infer_binop op t1 t2 =
   match op with
@@ -53,11 +76,11 @@ let rec infer_w env e =
   | String _ -> ([], TString)
   | Unit -> ([], TUnit)
   | Var x -> (
-      try ([], List.assoc x env)
+      try ([], instantiate (List.assoc x env))
       with Not_found -> raise (Subst.TypeError ("Unbound variable " ^ x)))
   | BinOp (e1, op, e2) ->
       let s1, t1 = infer_w env e1 in
-      let s2, t2 = infer_w (Subst.apply_env s1 env) e2 in
+      let s2, t2 = infer_w (apply_env s1 env) e2 in
       let s_acc = Subst.compose s2 s1 in
       let s3, ret_t = infer_binop op (Subst.apply s_acc t1) t2 in
       (Subst.compose s3 s_acc, ret_t)
@@ -70,11 +93,11 @@ let rec infer_w env e =
       (Subst.compose s' s, Subst.apply s' t2)
   | Fun (id, body) ->
       let t_arg = fresh () in
-      let s, t_body = infer_w ((id, t_arg) :: env) body in
+      let s, t_body = infer_w ((id, mono t_arg) :: env) body in
       (s, TArrow (Subst.apply s t_arg, t_body))
   | App (e1, e2) -> (
       let s1, t1 = infer_w env e1 in
-      let s2, t2 = infer_w (Subst.apply_env s1 env) e2 in
+      let s2, t2 = infer_w (apply_env s1 env) e2 in
       let s_acc = Subst.compose s2 s1 in
       let t_ret = fresh () in
       try
@@ -84,12 +107,14 @@ let rec infer_w env e =
         raise (Subst.TypeError ("In " ^ string_of_expr e ^ ": " ^ err)))
   | Let (id, e1, e2) ->
       let s1, t1 = infer_w env e1 in
-      let env' = Subst.apply_env s1 env in
-      let s2, t2 = infer_w ((id, Subst.apply s1 t1) :: env') e2 in
+      let env = apply_env s1 env in
+      let sc = generalize env (Subst.apply s1 t1) in
+      let s2, t2 = infer_w ((id, sc) :: env) e2 in
       (Subst.compose s2 s1, t2)
   | Rec (id, e1, e2) ->
       let s, t1 = rec_binding env id e1 in
-      let s', t2 = infer_w ((id, t1) :: Subst.apply_env s env) e2 in
+      let env = apply_env s env in
+      let s', t2 = infer_w ((id, generalize env t1) :: env) e2 in
       (Subst.compose s' s, t2)
   | List exprs ->
       let t_elem = fresh () in
@@ -106,31 +131,28 @@ let rec infer_w env e =
   | Match (e, cases) ->
       let s, t_e = infer_w env e in
       let t_ret = fresh () in
-      let s, _ =
+      let s =
         List.fold_left
-          (fun (s, env_acc) (pat, body) ->
+          (fun s (pat, body) ->
             let bindings, t_pat = infer_pat pat in
-            let s_pat = Subst.unify (Subst.apply s t_e) t_pat in
-            let s_body, t_body =
-              infer_w (bindings @ Subst.apply_env s_pat env_acc) body
+            let s = Subst.compose (Subst.unify (Subst.apply s t_e) t_pat) s in
+            let bound =
+              List.map (fun (id, t) -> (id, mono (Subst.apply s t))) bindings
             in
-            let s = Subst.compose s_body (Subst.compose s_pat s) in
-            let s =
-              Subst.compose (Subst.unify (Subst.apply s t_ret) t_body) s
-            in
-            (s, Subst.apply_env s env))
-          (s, Subst.apply_env s env)
-          cases
+            let s_body, t_body = infer_w (bound @ apply_env s env) body in
+            let s = Subst.compose s_body s in
+            Subst.compose (Subst.unify (Subst.apply s t_ret) t_body) s)
+          s cases
       in
       (s, Subst.apply s t_ret)
 
 and step s env e =
-  let s', t = infer_w (Subst.apply_env s env) e in
+  let s', t = infer_w (apply_env s env) e in
   (Subst.compose s' s, t)
 
 and rec_binding env id e =
   let t_rec = fresh () in
-  let s, t = infer_w ((id, t_rec) :: env) e in
+  let s, t = infer_w ((id, mono t_rec) :: env) e in
   let s =
     Subst.compose (Subst.unify (Subst.apply s t_rec) (Subst.apply s t)) s
   in

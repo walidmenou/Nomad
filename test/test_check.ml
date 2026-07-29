@@ -1,11 +1,12 @@
 open Nomad.Ast
 open Nomad.Subst
 open Nomad.Check
+open Nomad.Infer
 
 let check_stmts stmts expected () =
   match List.fold_left check_stmt [] stmts with
   | env ->
-      let binding (id, t) = id ^ " : " ^ string_of_typ t in
+      let binding (id, Forall (_, t)) = id ^ " : " ^ string_of_typ t in
       Alcotest.(check (list string))
         "bindings" expected (List.rev_map binding env)
   | exception TypeError e -> Alcotest.fail ("TypeError: " ^ e)
