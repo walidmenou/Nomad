@@ -1,8 +1,5 @@
-let rec gcd = fun args ->
-  match args with
-  a :: b :: [] ->
-      if b = 0 then a
-      else gcd (b :: (a - (a / b) * b) :: [])
-  | _ -> 0
+let rec gcd = fun a -> fun b ->
+  if b = 0 then a
+  else gcd b (a - (a / b) * b)
 
-let result = gcd (48 :: 18 :: [])
+let result = gcd 48 18

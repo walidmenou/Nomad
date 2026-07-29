@@ -22,13 +22,8 @@ let repl () =
                 let eval_env' =
                   List.fold_left
                     (fun e stmt ->
-                      let e', res = eval_stmt e stmt in
-                      (match res with
-                      | Some v -> (
-                          match show_val v with
-                          | Some s -> print_endline s
-                          | None -> ())
-                      | None -> ());
+                      let e', v = eval_stmt e stmt in
+                      print_endline (show_val v);
                       e')
                     eval_env stmts
                 in

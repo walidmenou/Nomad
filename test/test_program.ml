@@ -75,25 +75,47 @@ let test_let () =
   check_run "let x = 1\nlet a = let x = 2 in x" [ "1"; "2" ] ()
 
 let test_application () =
-  check_run "let f = fun x -> x + 1\nlet a = f 2" [ "3" ] ();
-  check_run "let f = fun x -> x\nlet a = f [1; 2]" [ "[1; 2]" ] ();
+  check_run "let f = fun x -> x + 1\nlet a = f 2" [ "<fun>"; "3" ] ();
+  check_run "let f = fun x -> x\nlet a = f [1; 2]" [ "<fun>"; "[1; 2]" ] ();
   check_run "let a = (fun x -> x * x) 4" [ "16" ] ()
 
+let test_closures () =
+  (* A function body means what it meant where the function was written, not
+     where it is called, so rebinding x afterwards cannot reach inside f. *)
+  check_run "let x = 1\nlet f = fun y -> x + y\nlet x = 100\nlet r = f 5"
+    [ "1"; "<fun>"; "100"; "6" ]
+    ();
+  (* Applying one argument at a time gives back a function that remembers the
+     arguments so far. *)
+  check_run "let add = fun x -> fun y -> x + y\nlet a = add 1 2"
+    [ "<fun>"; "3" ] ();
+  check_run
+    "let make = fun n -> fun x -> x + n\nlet inc = make 1\nlet a = inc 5"
+    [ "<fun>"; "<fun>"; "6" ] ();
+  (* A function passed to another function keeps its own scope. *)
+  check_run
+    "let x = 1\n\
+     let twice = fun f -> fun v -> f (f v)\n\
+     let g = fun y -> x + y\n\
+     let a = twice g 0"
+    [ "1"; "<fun>"; "<fun>"; "2" ]
+    ()
+
 let test_pipe () =
-  check_run "let f = fun x -> x + 1\nlet a = 5 |> f" [ "6" ] ();
+  check_run "let f = fun x -> x + 1\nlet a = 5 |> f" [ "<fun>"; "6" ] ();
   check_run
     "let f = fun x -> x + 1\nlet g = fun x -> x * 2\nlet a = 5 |> f |> g"
-    [ "12" ] ()
+    [ "<fun>"; "<fun>"; "12" ] ()
 
 let test_recursion () =
   check_run
     "let rec fact = fun n -> if n = 0 then 1 else n * fact (n - 1)\n\
      let a = fact 5"
-    [ "120" ] ();
+    [ "<fun>"; "120" ] ();
   check_run
     "let rec len = fun l -> match l with [] -> 0 | x :: xs -> 1 + len xs\n\
      let a = len [1; 2; 3]"
-    [ "3" ] ()
+    [ "<fun>"; "3" ] ()
 
 let test_cons () =
   check_run "let a = 1 :: [2; 3]" [ "[1; 2; 3]" ] ();
@@ -119,8 +141,11 @@ let test_type_errors () =
   check_type_error "let a = x" "Unbound variable x" ()
 
 let test_examples () =
-  check_run (read_file "../examples/euclid.nd") [ "6" ] ();
-  check_run (read_file "../examples/sort.nd") [ "[1; 2; 5; 5; 6; 9]" ] ()
+  check_run (read_file "../examples/euclid.nd") [ "<fun>"; "6" ] ();
+  check_run
+    (read_file "../examples/sort.nd")
+    [ "<fun>"; "<fun>"; "[1; 2; 5; 5; 6; 9]" ]
+    ()
 
 let tests =
   [
@@ -131,6 +156,7 @@ let tests =
     ("conditional", `Quick, test_conditional);
     ("let", `Quick, test_let);
     ("application", `Quick, test_application);
+    ("closures", `Quick, test_closures);
     ("pipe", `Quick, test_pipe);
     ("recursion", `Quick, test_recursion);
     ("cons", `Quick, test_cons);
