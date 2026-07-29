@@ -192,7 +192,7 @@ let test_type_errors () =
   check_type_error "let a = x" "Unbound variable x" ()
 
 let test_examples () =
-  check_run (read_file "../examples/euclid.nd") [ "<fun>"; "6" ] ();
+  check_run (read_file "../examples/gcd.nd") [ "<fun>"; "6" ] ();
   check_run
     (read_file "../examples/sort.nd")
     [ "<fun>"; "<fun>"; "[1; 2; 5; 5; 6; 9]" ]
