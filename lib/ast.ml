@@ -51,7 +51,7 @@ type expr =
   | Comp of expr * qualifier list
   | Match of expr * (pattern * expr) list
 
-and qualifier = Gen of pattern * expr
+and qualifier = Gen of pattern * expr | Guard of expr
 
 type statement =
   | LetStmt of ident * expr
@@ -122,6 +122,7 @@ let rec string_of_expr = function
 
 and string_of_qual = function
   | Gen (p, e) -> string_of_pat p ^ " <- " ^ string_of_expr e
+  | Guard e -> string_of_expr e
 
 and atom e =
   match e with

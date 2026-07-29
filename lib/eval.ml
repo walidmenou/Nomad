@@ -85,6 +85,7 @@ and comp env qs body acc =
               | None -> acc)
             acc vs
       | _ -> raise (EvaluationError "A generator needs a list"))
+  | Guard e :: rest -> if truth env e then comp env rest body acc else acc
 
 and truth env e =
   match eval env e with

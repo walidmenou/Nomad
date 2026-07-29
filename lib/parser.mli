@@ -152,9 +152,23 @@ val lit_expr : expr t
 (** Parses a literal, e.g: 12, true or () *)
 
 val list_expr : expr t
-(** Parses a bracketed expression, either a list literal `[e; ...; e]` or an
-    inclusive integer range `[a..b]`. The range is empty when its upper bound is
-    below its lower one *)
+(** Parses a bracketed expression, one of three forms. A comprehension
+    `[e | q, ..., q]`, an inclusive integer range `[a..b]`, or a list literal
+    `[e; ...; e]`. They are tried in that order, and the `|` after the body is
+    what tells a comprehension from the other two. A range is empty when its
+    upper bound is below its lower one *)
+
+val qualifier : qualifier t
+(** Parses one comprehension qualifier, either a generator or a guard.
+
+    A generator `p <- e` draws values from a list. Its pattern may be refutable,
+    and a value the pattern rejects is skipped rather than being an error, which
+    is what makes `[x | h :: t <- xss]` pick out the heads of the non-empty
+    lists.
+
+    A guard is any boolean expression, and it skips the qualifiers after it for
+    the value in hand. Generators are tried first, so `x <- xs` reads as a
+    generator while `x < xs` reads as a guard *)
 
 val atom_expr : expr t
 (** Parses an atomic (i.e irreducile) expression, e.g: `x`, `(<expr>)`, `12` *)

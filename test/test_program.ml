@@ -93,6 +93,16 @@ let test_generator_patterns () =
   check_run "let a = [x | x :: r <- [[1]; []; [3]]]" [ "[1; 3]" ] ();
   check_run "let a = [1 | [] <- [[1]; []; []]]" [ "[1; 1]" ] ()
 
+let test_comprehension_guards () =
+  check_run "let a = [x | x <- [1..6], x > 3]" [ "[4; 5; 6]" ] ();
+  check_run "let a = [x | x <- [1..10], x > 3, x < 6]" [ "[4; 5]" ] ();
+  check_run "let a = [x * x | x <- [1..5], x < 3]" [ "[1; 4]" ] ();
+  check_run "let a = [x | x <- [1..3], false]" [ "[]" ] ();
+  check_run "let a = [x + y | x <- [1..3], x > 1, y <- [1..2]]"
+    [ "[3; 4; 4; 5]" ] ();
+  check_run "let a = [x | x <- [1..4], x <> 2]" [ "[1; 3; 4]" ] ();
+  check_type_fails "let a = [x | x <- [1..3], x]" ()
+
 let test_comprehension_body () =
   check_run "let a = [match x with 0 -> 9 | n -> n | x <- [0; 1; 2]]"
     [ "[9; 1; 2]" ] ();
@@ -350,6 +360,7 @@ let tests =
     ("comprehension", `Quick, test_comprehension);
     ("nested generators", `Quick, test_nested_generators);
     ("generator patterns", `Quick, test_generator_patterns);
+    ("comprehension guards", `Quick, test_comprehension_guards);
     ("comprehension body", `Quick, test_comprehension_body);
     ("comprehension types", `Quick, test_comprehension_types);
     ("printing", `Quick, test_printing);

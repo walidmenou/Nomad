@@ -239,7 +239,8 @@ and generator input =
     expr |*> fun src -> return (Gen (p, src)) )
     input
 
-and qualifier input = generator input
+and guard input = (expr |*> fun e -> return (Guard e)) input
+and qualifier input = (generator <|> guard) input
 
 and comp_body input =
   ( expr |*> fun body ->
