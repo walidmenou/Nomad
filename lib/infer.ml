@@ -78,17 +78,12 @@ let rec infer_w env e =
       let s3, ret_t = infer_binop op (Subst.apply s_acc t1) t2 in
       (Subst.compose s3 s_acc, ret_t)
   | If (cond, e1, e2) ->
-      let s1, tcond = infer_w env cond in
-      let s2 = Subst.unify tcond TBool in
-      let s_acc1 = Subst.compose s2 s1 in
-      let env1 = Subst.apply_env s_acc1 env in
-      let s3, t1 = infer_w env1 e1 in
-      let s_acc2 = Subst.compose s3 s_acc1 in
-      let env2 = Subst.apply_env s_acc2 env in
-      let s4, t2 = infer_w env2 e2 in
-      let s_acc3 = Subst.compose s4 s_acc2 in
-      let s5 = Subst.unify (Subst.apply s_acc3 t1) t2 in
-      (Subst.compose s5 s_acc3, Subst.apply s5 t2)
+      let s, t_cond = infer_w env cond in
+      let s = Subst.compose (Subst.unify t_cond TBool) s in
+      let s, t1 = step s env e1 in
+      let s, t2 = step s env e2 in
+      let s' = Subst.unify (Subst.apply s t1) t2 in
+      (Subst.compose s' s, Subst.apply s' t2)
   | Fun (id, body) ->
       let t_arg = fresh () in
       let s, t_body = infer_w ((id, t_arg) :: env) body in
@@ -121,37 +116,42 @@ let rec infer_w env e =
       (Subst.compose s3 s_acc, t2)
   | List exprs ->
       let t_elem = fresh () in
-      let s_final, _ =
+      let s =
         List.fold_left
-          (fun (s_acc, env_acc) e ->
-            let s, t = infer_w env_acc e in
-            let s_acc2 = Subst.compose s s_acc in
-            let s' =
-              Subst.unify (Subst.apply s_acc2 t) (Subst.apply s_acc2 t_elem)
-            in
-            let total_s = Subst.compose s' s_acc2 in
-            (total_s, Subst.apply_env total_s env))
-          ([], env) exprs
+          (fun s e ->
+            let s, t = step s env e in
+            Subst.compose
+              (Subst.unify (Subst.apply s t) (Subst.apply s t_elem))
+              s)
+          [] exprs
       in
-      (s_final, TList (Subst.apply s_final t_elem))
+      (s, TList (Subst.apply s t_elem))
   | Match (e, cases) ->
-      let s1, t_e = infer_w env e in
+      let s, t_e = infer_w env e in
       let t_ret = fresh () in
-      let s_final, _ =
+      let s, _ =
         List.fold_left
-          (fun (s_acc, env_acc) (pat, body) ->
-            let pat_bindings, pat_type = infer_pat pat in
-            let s_pat = Subst.unify (Subst.apply s_acc t_e) pat_type in
-            let env_body = pat_bindings @ Subst.apply_env s_pat env_acc in
-            let s_body, t_body = infer_w env_body body in
-            let s_acc2 = Subst.compose s_body (Subst.compose s_pat s_acc) in
-            let s_ret = Subst.unify (Subst.apply s_acc2 t_ret) t_body in
-            let total_s = Subst.compose s_ret s_acc2 in
-            (total_s, Subst.apply_env total_s env))
-          (s1, Subst.apply_env s1 env)
+          (fun (s, env_acc) (pat, body) ->
+            let bindings, t_pat = infer_pat pat in
+            let s_pat = Subst.unify (Subst.apply s t_e) t_pat in
+            let s_body, t_body =
+              infer_w (bindings @ Subst.apply_env s_pat env_acc) body
+            in
+            let s = Subst.compose s_body (Subst.compose s_pat s) in
+            let s =
+              Subst.compose (Subst.unify (Subst.apply s t_ret) t_body) s
+            in
+            (s, Subst.apply_env s env))
+          (s, Subst.apply_env s env)
           cases
       in
-      (s_final, Subst.apply s_final t_ret)
+      (s, Subst.apply s t_ret)
+
+(* Infers [e] in [env] refined by everything learnt so far, folding the
+   substitution it forces back into that accumulated one. *)
+and step s env e =
+  let s', t = infer_w (Subst.apply_env s env) e in
+  (Subst.compose s' s, t)
 
 let infer env expr =
   let s, t = infer_w env expr in
