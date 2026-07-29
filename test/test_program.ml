@@ -71,6 +71,22 @@ let test_arithmetic () =
   check_run "let a = 0 - 7 / 2" [ "-3" ] ();
   check_run "let a = 1 - 2 - 3" [ "-4" ] ()
 
+let test_unary_minus () =
+  check_run "let a = -5" [ "-5" ] ();
+  check_run "let x = 3\nlet a = -x" [ "3"; "-3" ] ();
+  check_run "let x = 3\nlet a = -x * 2" [ "3"; "-6" ] ();
+  check_run "let a = - -5" [ "5" ] ();
+  check_run "let a = 1 - -2" [ "3" ] ();
+  check_run "let a = -2 + 3" [ "1" ] ();
+  check_run "let a = match -5 with -5 -> 1 | _ -> 0" [ "1" ] ()
+
+let test_minus_spacing () =
+  check_run "let a = 1 - 2" [ "-1" ] ();
+  check_run "let a = 1 -2" [ "-1" ] ();
+  check_run "let a = 1 --2" [ "1" ] ();
+  check_run "let x = 5\nlet a = x -1" [ "5"; "4" ] ();
+  check_run "let f = fun y -> y + 1\nlet a = f (-1)" [ "<fun>"; "0" ] ()
+
 let test_comparison () =
   check_run "let a = 1 < 2" [ "true" ] ();
   check_run "let a = 2 <= 2" [ "true" ] ();
@@ -202,6 +218,8 @@ let tests =
     ("comments", `Quick, test_comments);
     ("printing", `Quick, test_printing);
     ("arithmetic", `Quick, test_arithmetic);
+    ("unary minus", `Quick, test_unary_minus);
+    ("minus spacing", `Quick, test_minus_spacing);
     ("comparison", `Quick, test_comparison);
     ("equality", `Quick, test_equality);
     ("function equality", `Quick, test_function_equality);

@@ -57,7 +57,7 @@ val natural : int t
 
 val integer : int t
 (** Parses an integer (positive or negative) and consumes all spaces that come
-    after it *)
+    after it. Used by patterns, where a sign cannot be an operator *)
 
 val spaces : unit t
 (** Parses whitespace between statements, newlines included, since a newline
@@ -94,7 +94,9 @@ val ident : string t
 (** parses an identifier: alpha character followed by alphanumeric characters *)
 
 val int_lit : expr t
-(** Parses an integer Literal expression, e.g: "123" *)
+(** Parses an integer literal expression, e.g: "123". A literal carries no sign,
+    since a leading minus is the unary operator, so that `1 -2` reads as a
+    subtraction rather than an application *)
 
 val bool_lit : expr t
 (** Parses an boolean Literal expression, e.g: "true"*)
@@ -138,6 +140,10 @@ val add_expr : expr t
 
 val mul_expr : expr t
 (** Parses a multiplicative expression *)
+
+val neg_expr : expr t
+(** Parses a negation, e.g: `-x`. Binds tighter than multiplication and stands
+    for `0 - x`, so nothing downstream needs to know about it *)
 
 val var_expr : expr t
 (** Parses a reference to a variable *)

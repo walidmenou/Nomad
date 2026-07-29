@@ -10,8 +10,6 @@ type typ =
   | TList of typ
   | TVar of int
 
-type uop = Negate
-
 type binary_op =
   | Add
   | Sub

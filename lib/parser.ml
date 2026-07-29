@@ -113,7 +113,7 @@ let ident =
       let s = ltos (x :: xs) in
       if List.mem s keywords then none else return s )
 
-let int_lit = integer |*> fun x -> return (Int x)
+let int_lit = natural |*> fun x -> return (Int x)
 
 let boolean =
   keyword "true" |>> return true <|> (keyword "false" |>> return false)
@@ -213,7 +213,13 @@ and and_expr input = chain_left andop cmp_expr input
 and cmp_expr input = chain_cmps cmpop pipe_expr input
 and cons_expr input = chain_right consop add_expr input
 and add_expr input = chain_left addop mul_expr input
-and mul_expr input = chain_left mulop app_expr input
+and mul_expr input = chain_left mulop neg_expr input
+
+and neg_expr input =
+  (keyword "-" |>> neg_expr
+  |*> (fun e -> return (BinOp (Int 0, Sub, e)))
+  <|> app_expr)
+    input
 
 and pipe_expr input =
   ( cons_expr |*> fun first ->

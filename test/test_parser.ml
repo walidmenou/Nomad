@@ -14,7 +14,7 @@ let check_fail p input () =
 
 let test_lit_expr () =
   check_parse lit_expr "123" (Int 123) ();
-  check_parse lit_expr "-42" (Int (-42)) ();
+  check_fail lit_expr "-42" ();
   check_parse lit_expr "true" (Bool true) ();
   check_parse lit_expr "false" (Bool false) ();
   check_parse lit_expr "()" Unit ();
@@ -60,6 +60,15 @@ let test_precedence () =
        (BinOp (Var "a", Equal, Var "b"), And, BinOp (Var "b", Equal, Var "c")))
     ();
   check_parse expr "a <> b" (BinOp (Var "a", Diff, Var "b")) ()
+
+let test_unary_minus () =
+  check_parse expr "-x" (BinOp (Int 0, Sub, Var "x")) ();
+  check_parse expr "-x * y"
+    (BinOp (BinOp (Int 0, Sub, Var "x"), Mul, Var "y"))
+    ();
+  check_parse expr "a - b" (BinOp (Var "a", Sub, Var "b")) ();
+  check_parse expr "a -b" (BinOp (Var "a", Sub, Var "b")) ();
+  check_parse pattern "-42" (PatInt (-42)) ()
 
 let test_let_expr () =
   check_parse expr "let x = 1 in x" (Let ("x", Int 1, Var "x")) ()
@@ -117,6 +126,7 @@ let tests =
     ("arithmetic", `Quick, test_arith_expr);
     ("comparisons", `Quick, test_cmp_expr);
     ("precedence", `Quick, test_precedence);
+    ("unary minus", `Quick, test_unary_minus);
     ("let", `Quick, test_let_expr);
     ("let rec", `Quick, test_let_rec_expr);
     ("if", `Quick, test_if_expr);
