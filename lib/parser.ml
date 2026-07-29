@@ -43,9 +43,6 @@ let sepby sep p =
 
 let spaces = many (char ' ' <|> char '\n' <|> char '\t')
 
-(* Whitespace within one statement. A newline belongs to it only when the line
-   that follows is indented, so a token in the first column always begins a new
-   statement and no expression can run past it. *)
 let rec inline_spaces input =
   match input with
   | (' ' | '\t') :: cs -> inline_spaces cs
@@ -126,8 +123,6 @@ let mulop =
 let orop = keyword "||" |*> fun _ -> return Or
 let andop = keyword "&&" |*> fun _ -> return And
 
-(* Two-character operators come first, so that <= is never read as < followed
-   by =. *)
 let cmpop =
   keyword "<="
   |*> (fun _ -> return Leq)
@@ -194,8 +189,6 @@ let rec chain_right_pat op_p exp_p input =
 
 let pattern input = chain_right_pat (keyword "::") atom_pat input
 
-(* One parser per precedence level, each written in terms of the level that
-   binds tighter, loosest first. *)
 let rec expr input =
   (if_expr <|> fun_expr <|> let_rec_expr <|> let_expr <|> match_expr <|> or_expr)
     input
@@ -207,8 +200,6 @@ and cons_expr input = chain_right consop add_expr input
 and add_expr input = chain_left addop mul_expr input
 and mul_expr input = chain_left mulop app_expr input
 
-(* Sits above cons and below comparison, so that a whole pipeline is one
-   operand of the comparison around it. *)
 and pipe_expr input =
   ( cons_expr |*> fun first ->
     many (pipe |>> cons_expr) |*> fun rest ->
@@ -274,9 +265,6 @@ let rec_stmt input =
 let expr_stmt input = (expr |*> fun exp -> return (ExprStmt exp)) input
 let statement input = (rec_stmt <|> let_stmt <|> expr_stmt) input
 
-(* Layout already ends a statement at the next line in the first column. Two
-   semicolons end one outright, which is the only way to put more than one on a
-   line, and they stay optional everywhere else. *)
 let program input =
   let sep = maybe (keyword ";;") |>> spaces in
   (spaces |>> many (statement <<| sep)) input

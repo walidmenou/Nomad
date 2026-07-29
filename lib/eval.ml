@@ -2,10 +2,6 @@ open Ast
 
 exception EvaluationError of string
 
-(* A function value carries the environment it was written in, which is what
-   makes a free variable in its body mean what it meant there rather than
-   whatever it happens to mean at the call. A recursive one also carries the
-   name it calls itself by. *)
 type value =
   | VInt of int
   | VBool of bool
@@ -41,8 +37,6 @@ let rec eval env e =
   | Var x -> (
       try List.assoc x env
       with Not_found -> raise (EvaluationError ("Unbound Variable: " ^ x)))
-  (* A connective looks at its right operand only when the left has not already
-     settled the answer, so a guard can protect what follows it. *)
   | BinOp (e1, And, e2) -> if truth env e1 then eval env e2 else VBool false
   | BinOp (e1, Or, e2) -> if truth env e1 then VBool true else eval env e2
   | BinOp (e1, op, e2) -> binop op (eval env e1) (eval env e2)
@@ -53,24 +47,17 @@ let rec eval env e =
   | List exprs -> VList (List.map (eval env) exprs)
   | Match (e, cases) -> try_match env cases (eval env e)
 
-(* The body runs in the environment the function closed over, extended with the
-   argument. A recursive function also puts its own name back in scope, which is
-   what lets it call itself. *)
 and apply f arg =
   match f with
   | VClos (id, body, env) -> eval ((id, arg) :: env) body
   | VRecClos (name, id, body, env) -> eval ((id, arg) :: (name, f) :: env) body
   | _ -> raise (EvaluationError "Application of non-function")
 
-(* Only a function can refer to itself in its own definition, so anything else
-   is evaluated the ordinary way. *)
 and rec_value env id e =
   match e with
   | Fun (arg, body) -> VRecClos (id, arg, body, env)
   | _ -> eval env e
 
-(* The first case whose pattern fits wins, and what it binds hides anything of
-   the same name already in scope. *)
 and try_match env cases v =
   match cases with
   | [] -> raise (EvaluationError "Match failure")
@@ -100,9 +87,6 @@ and binop op v1 v2 =
   | Diff, _, _ -> VBool (not (equal v1 v2))
   | _ -> raise (EvaluationError "Type mismatch in binary operation")
 
-(* Structural, so two values of the same type are equal when they are built the
-   same way. Functions are the exception, since looking at the code cannot
-   decide whether two of them agree. *)
 and equal v1 v2 =
   match (v1, v2) with
   | (VClos _ | VRecClos _), _ | _, (VClos _ | VRecClos _) ->
@@ -129,8 +113,6 @@ let rec show_val = function
   | VList vs -> "[" ^ String.concat "; " (List.map show_val vs) ^ "]"
   | VClos _ | VRecClos _ -> "<fun>"
 
-(* The lines a program prints, in order. Kept separate from [eval_program] so a
-   test can compare against them without capturing stdout. *)
 let run_program stmts =
   let step (env, printed) stmt =
     let env, v = eval_stmt env stmt in

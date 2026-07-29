@@ -1,6 +1,3 @@
-(* End to end tests: source text in, printed lines out, through the parser, the
-   checker and the evaluator in turn. *)
-
 open Nomad
 
 let run src =
@@ -10,18 +7,15 @@ let run src =
       Check.check_program stmts;
       Eval.run_program stmts
 
-(* [src] runs and prints exactly [expected]. *)
 let check_run src expected () =
   Alcotest.(check (list string)) "output" expected (run src)
 
-(* [src] parses and checks, but fails while running. *)
 let check_eval_error src expected () =
   match run src with
   | _ -> Alcotest.fail "expected an evaluation error"
   | exception Eval.EvaluationError e ->
       Alcotest.(check string) "error message" expected e
 
-(* [src] parses, but does not check. *)
 let check_type_error src expected () =
   match run src with
   | _ -> Alcotest.fail "expected a type error"
@@ -37,29 +31,20 @@ let read_file path =
 let test_bindings () =
   check_run "let x = 1" [ "1" ] ();
   check_run "let x = 1\nlet y = x + 1" [ "1"; "2" ] ();
-  (* A binding shadows the earlier one of the same name. *)
   check_run "let x = 1\nlet x = 2\nlet y = x" [ "1"; "2"; "2" ] ()
 
-(* A statement ends at the next line that starts in the first column, so a
-   binding cannot swallow the statements that follow it. *)
 let test_layout () =
   check_run "let id = fun x -> x\nid 1\nid true" [ "<fun>"; "1"; "true" ] ();
   check_run "1 + 1\n2 + 2" [ "2"; "4" ] ();
-  (* An indented line carries on the statement above it. *)
   check_run "let a =\n  1 +\n  2" [ "3" ] ();
   check_run "let a =\n  let x = 1 in\n  x + 1" [ "2" ] ();
-  (* Blank lines are whitespace wherever they fall. *)
   check_run "let a = 1\n\nlet b = 2" [ "1"; "2" ] ();
   check_run "let a =\n  1 +\n\n  2" [ "3" ] ();
-  (* Leading and trailing whitespace is no obstacle. *)
   check_run "\n\nlet a = 1\n\n" [ "1" ] ()
 
-(* Two semicolons end a statement outright, which is how to put more than one
-   on a line. *)
 let test_double_semicolon () =
   check_run "let a = 1 ;; let b = 2" [ "1"; "2" ] ();
   check_run "let a = 1 ;; a + 1 ;; a + 2" [ "1"; "2"; "3" ] ();
-  (* It stays optional, and a trailing one is harmless. *)
   check_run "let a = 1 ;;" [ "1" ] ();
   check_run "let a = 1\nlet b = 2 ;;" [ "1"; "2" ] ()
 
@@ -81,23 +66,19 @@ let test_comparison () =
   check_run "let a = 1 < 2" [ "true" ] ();
   check_run "let a = 2 <= 2" [ "true" ] ();
   check_run "let a = 1 = 1" [ "true" ] ();
-  (* A run of comparisons expands to a conjunction, so both halves must hold. *)
   check_run "let x = 3\nlet a = 0 <= x < 5" [ "3"; "true" ] ();
   check_run "let x = 9\nlet a = 0 <= x < 5" [ "9"; "false" ] ()
 
-(* Equality looks at the whole value, whatever its type. *)
 let test_equality () =
   check_run "let a = \"x\" = \"x\"" [ "true" ] ();
   check_run "let a = \"x\" = \"y\"" [ "false" ] ();
   check_run "let a = () = ()" [ "true" ] ();
   check_run "let a = [1; 2] = [1; 2]" [ "true" ] ();
   check_run "let a = [1; 2] = [1; 3]" [ "false" ] ();
-  (* Lists of different lengths differ rather than raising. *)
   check_run "let a = [1] = [1; 2]" [ "false" ] ();
   check_run "let a = [[1]; [2]] = [[1]; [2]]" [ "true" ] ();
   check_run "let a = [] = []" [ "true" ] ()
 
-(* Two functions cannot be compared by looking at them. *)
 let test_function_equality () =
   check_eval_error "let f = fun x -> x\nlet a = f = f"
     "Cannot compare functions" ();
@@ -109,28 +90,20 @@ let test_connectives () =
   check_run "let a = true || false" [ "true" ] ();
   check_run "let a = 1 <> 2" [ "true" ] ();
   check_run "let a = [1] <> [1]" [ "false" ] ();
-  (* && binds tighter than ||, so this reads true || (false && false). *)
   check_run "let a = true || false && false" [ "true" ] ();
-  (* Comparison binds tighter than &&. *)
   check_run "let a = 1 < 2 && 3 < 4" [ "true" ] ()
 
-(* The right operand runs only when the left has not already settled the
-   answer, so a guard can protect what follows it. *)
 let test_short_circuit () =
   check_run "let a = false && 1 / 0 = 0" [ "false" ] ();
   check_run "let a = true || 1 / 0 = 0" [ "true" ] ();
-  (* The right operand still runs when the left leaves the answer open. *)
   check_run "let a = true && 1 = 1" [ "true" ] ();
   check_run "let a = false || 1 = 2" [ "false" ] ();
   check_eval_error "let a = true && 1 / 0 = 0" "Division by zero" ()
 
 let test_precedence () =
-  (* Cons binds tighter than equality, so this compares two lists. *)
   check_run "let l = [2]\nlet a = 1 :: l = [1; 2]" [ "[2]"; "true" ] ();
-  (* A run of equalities chains like any other comparison. *)
   check_run "let a = 1 = 1 = 1" [ "true" ] ();
   check_run "let a = 1 = 1 = 2" [ "false" ] ();
-  (* A pipeline is one operand of the comparison around it. *)
   check_run
     "let rec len = fun l -> match l with [] -> 0 | x :: xs -> 1 + len xs\n\
      let a = [1; 2; 3] |> len > 0"
@@ -139,13 +112,11 @@ let test_precedence () =
 let test_conditional () =
   check_run "let a = if true then 1 else 2" [ "1" ] ();
   check_run "let a = if 1 < 0 then 1 else 2" [ "2" ] ();
-  (* Only the branch that is taken runs, so the other may be undefined. *)
   check_run "let a = if false then 1 / 0 else 2" [ "2" ] ()
 
 let test_let () =
   check_run "let a = let x = 2 in x * x" [ "4" ] ();
   check_run "let a = let x = 1 in let y = 2 in x + y" [ "3" ] ();
-  (* An inner binding hides the outer one for the rest of the body. *)
   check_run "let x = 1\nlet a = let x = 2 in x" [ "1"; "2" ] ()
 
 let test_application () =
@@ -154,19 +125,14 @@ let test_application () =
   check_run "let a = (fun x -> x * x) 4" [ "16" ] ()
 
 let test_closures () =
-  (* A function body means what it meant where the function was written, not
-     where it is called, so rebinding x afterwards cannot reach inside f. *)
   check_run "let x = 1\nlet f = fun y -> x + y\nlet x = 100\nlet r = f 5"
     [ "1"; "<fun>"; "100"; "6" ]
     ();
-  (* Applying one argument at a time gives back a function that remembers the
-     arguments so far. *)
   check_run "let add = fun x -> fun y -> x + y\nlet a = add 1 2"
     [ "<fun>"; "3" ] ();
   check_run
     "let make = fun n -> fun x -> x + n\nlet inc = make 1\nlet a = inc 5"
     [ "<fun>"; "<fun>"; "6" ] ();
-  (* A function passed to another function keeps its own scope. *)
   check_run
     "let x = 1\n\
      let twice = fun f -> fun v -> f (f v)\n\
@@ -194,7 +160,6 @@ let test_recursion () =
 let test_cons () =
   check_run "let a = 1 :: [2; 3]" [ "[1; 2; 3]" ] ();
   check_run "let a = 1 :: 2 :: []" [ "[1; 2]" ] ();
-  (* Consing builds a new list and leaves the old one alone. *)
   check_run "let l = [2]\nlet a = 1 :: l\nlet b = l" [ "[2]"; "[1; 2]"; "[2]" ]
     ()
 
@@ -203,7 +168,6 @@ let test_match () =
   check_run "let a = match [] with [] -> 0 | x :: xs -> x" [ "0" ] ();
   check_run "let a = match [1; 2; 3] with x :: y :: rest -> x + y | _ -> 0"
     [ "3" ] ();
-  (* The first case that matches wins, so order decides the answer. *)
   check_run "let a = match 1 with _ -> 0 | 1 -> 9" [ "0" ] ()
 
 let test_runtime_errors () =

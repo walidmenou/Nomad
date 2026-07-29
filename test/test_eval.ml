@@ -13,7 +13,6 @@ let check_error env expr expected () =
   | exception EvaluationError e ->
       Alcotest.(check string) "error message" expected e
 
-(* fun n -> if n = 0 then 1 else n * fact (n - 1) *)
 let fact_body =
   Fun
     ( "n",
@@ -31,14 +30,12 @@ let test_lit () =
 
 let test_var () =
   check_eval [ ("x", VInt 1) ] (Var "x") (VInt 1) ();
-  (* The nearest binding of a name wins. *)
   check_eval [ ("x", VInt 2); ("x", VInt 1) ] (Var "x") (VInt 2) ()
 
 let test_arith () =
   check_eval [] (BinOp (Int 1, Add, Int 2)) (VInt 3) ();
   check_eval [] (BinOp (Int 1, Sub, Int 2)) (VInt (-1)) ();
   check_eval [] (BinOp (Int 3, Mul, Int 4)) (VInt 12) ();
-  (* Division truncates towards zero. *)
   check_eval [] (BinOp (Int 7, Div, Int 2)) (VInt 3) ();
   check_error [] (BinOp (Int 1, Div, Int 0)) "Division by zero" ()
 
@@ -50,7 +47,6 @@ let test_compare () =
   check_eval [] (BinOp (Bool true, And, Bool false)) (VBool false) ();
   check_eval [] (BinOp (Bool true, Or, Bool false)) (VBool true) ()
 
-(* <> has no concrete syntax yet, so this is the only place it is reachable. *)
 let test_equality () =
   check_eval [] (BinOp (String "a", Equal, String "a")) (VBool true) ();
   check_eval [] (BinOp (Unit, Equal, Unit)) (VBool true) ();
@@ -65,12 +61,10 @@ let test_equality () =
 let test_if () =
   check_eval [] (If (Bool true, Int 1, Int 2)) (VInt 1) ();
   check_eval [] (If (Bool false, Int 1, Int 2)) (VInt 2) ();
-  (* The branch that is not taken never runs. *)
   check_eval [] (If (Bool false, BinOp (Int 1, Div, Int 0), Int 2)) (VInt 2) ()
 
 let test_let () =
   check_eval [] (Let ("x", Int 2, BinOp (Var "x", Mul, Var "x"))) (VInt 4) ();
-  (* An inner binding hides the outer one. *)
   check_eval [ ("x", VInt 1) ] (Let ("x", Int 2, Var "x")) (VInt 2) ()
 
 let test_app () =
@@ -79,14 +73,11 @@ let test_app () =
     (VInt 3) ();
   check_eval [] (App (Fun ("x", Var "x"), List [ Int 1 ])) (VList [ VInt 1 ]) ()
 
-(* A function closes over the environment it was written in, so rebinding a
-   name afterwards cannot reach inside it. *)
 let test_closure () =
   let f = Fun ("y", BinOp (Var "x", Add, Var "y")) in
   check_eval []
     (Let ("x", Int 1, Let ("f", f, Let ("x", Int 100, App (Var "f", Int 5)))))
     (VInt 6) ();
-  (* Applying one argument at a time keeps the arguments so far. *)
   let add = Fun ("x", Fun ("y", BinOp (Var "x", Add, Var "y"))) in
   check_eval [] (App (App (add, Int 1), Int 2)) (VInt 3) ()
 
@@ -133,13 +124,11 @@ let test_match_string () =
     (Match (String "hello", [ (PatString "hello", Int 2); (PatWildcard, Int 3) ]))
     (VInt 2) ()
 
-(* A pattern variable hides anything of the same name already in scope. *)
 let test_match_shadowing () =
   check_eval
     [ ("x", VInt 1) ]
     (Match (Int 9, [ (PatVar "x", Var "x") ]))
     (VInt 9) ();
-  (* A name the pattern does not bind still means what it meant outside. *)
   check_eval
     [ ("y", VInt 7) ]
     (Match (Int 9, [ (PatVar "x", Var "y") ]))

@@ -113,9 +113,6 @@ let rec string_of_expr = function
       "match " ^ string_of_expr e ^ " with "
       ^ String.concat " | " (List.map case cases)
 
-(* Parenthesises anything that would not read as one unit in an operand or
-   argument position, which keeps the output unambiguous without needing a
-   table of operator precedences. *)
 and atom e =
   match e with
   | Int _ | Bool _ | String _ | Unit | Var _ | List _ -> string_of_expr e

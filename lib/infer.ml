@@ -124,15 +124,10 @@ let rec infer_w env e =
       in
       (s, Subst.apply s t_ret)
 
-(* Infers [e] in [env] refined by everything learnt so far, folding the
-   substitution it forces back into that accumulated one. *)
 and step s env e =
   let s', t = infer_w (Subst.apply_env s env) e in
   (Subst.compose s' s, t)
 
-(* Infers a recursive binding [id = e]: [id] stands for a fresh type variable
-   while [e] is inferred, which is then unified with what [e] turned out to be.
-   Shared by the [Rec] expression and the [RecStmt] statement. *)
 and rec_binding env id e =
   let t_rec = fresh () in
   let s, t = infer_w ((id, t_rec) :: env) e in

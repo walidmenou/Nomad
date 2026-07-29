@@ -105,6 +105,19 @@ val addop : binary_op t
 val mulop : binary_op t
 (** Parses a multiplication or division operator *)
 
+val orop : binary_op t
+(** Parses a disjunction operator *)
+
+val andop : binary_op t
+(** Parses a conjunction operator *)
+
+val cmpop : binary_op t
+(** Parses a relational or equality operator. Two-character operators are tried
+    first, so that `<=` is never read as `<` followed by `=` *)
+
+val consop : binary_op t
+(** Parses a cons operator *)
+
 val chain_left : binary_op t -> expr t -> expr t
 (** Parses a chain of expressions separated by the given operator type *)
 
@@ -151,13 +164,17 @@ val app_expr : expr t
 (** Parses the application of a function f on an expression e *)
 
 val expr : expr t
-(** Parses an expression *)
+(** Parses an expression. Each operator level is one parser written in terms of
+    the level that binds tighter. Loosest to tightest: `||`, `&&`, comparison,
+    `|>`, `::`, `+ -`, `* /`, application *)
 
 val pipe : unit t
 (** Parse a pipe operator `|>`*)
 
 val pipe_expr : expr t
-(** Parses chained pipe operations, e.g: `f1 |> f2 |> f3 |> ... |> fn` *)
+(** Parses chained pipe operations, e.g: `f1 |> f2 |> f3 |> ... |> fn`. Sits
+    above cons and below comparison, so that a whole pipeline is one operand of
+    the comparison around it *)
 
 val match_expr : expr t
 (** Parses a pattern matching expression *)

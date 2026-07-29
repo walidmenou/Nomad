@@ -14,13 +14,11 @@ let check_fail env expr () =
     Alcotest.fail "expected type error"
   with TypeError _ -> Alcotest.(check bool) "failed as expected" true true
 
-(* Pins the exact wording, so a refactor cannot quietly reword an error. *)
 let check_error env expr expected () =
   match infer env expr with
   | t -> Alcotest.fail ("expected type error, inferred " ^ string_of_typ t)
   | exception TypeError e -> Alcotest.(check string) "error message" expected e
 
-(* fun n -> if n = 0 then 1 else n * f (n - 1) *)
 let fact =
   Fun
     ( "n",
@@ -51,7 +49,6 @@ let test_if () =
   check_fail [] (If (Bool true, Int 1, Bool false)) ()
 
 let test_fun () =
-  (* fun x -> x  has type 'a -> 'a *)
   let t = infer [] (Fun ("x", Var "x")) in
   match t with
   | TArrow (TVar v1, TVar v2) when v1 = v2 ->
@@ -64,7 +61,6 @@ let test_app () =
 
 let test_let () =
   check_type [] (Let ("x", Int 1, BinOp (Var "x", Add, Int 2))) TInt ();
-  (* Bindings are monomorphic: there is no generalisation step. *)
   check_type [] (Let ("f", Fun ("x", Var "x"), App (Var "f", Int 1))) TInt ()
 
 let test_rec () =
@@ -75,7 +71,6 @@ let test_list () =
   check_type [] (List [ Int 1; Int 2; Int 3 ]) (TList TInt) ();
   check_type [] (List [ List [ Int 1 ] ]) (TList (TList TInt)) ();
   check_fail [] (List [ Int 1; Bool true ]) ();
-  (* [] is polymorphic, so its element type is whichever tvar is fresh here *)
   match infer [] (List []) with
   | TList (TVar _) -> Alcotest.(check bool) "empty list" true true
   | t -> Alcotest.fail ("Expected 'a list, got " ^ string_of_typ t)
@@ -113,7 +108,6 @@ let test_errors () =
     (Fun ("x", App (Var "x", Var "x")))
     "In x x: Recursive types not supported" ()
 
-(* string_of_expr prints Nomad source, so an error can quote the program back. *)
 let test_printer () =
   let shows e expected =
     Alcotest.(check string) "printed" expected (string_of_expr e)
@@ -131,7 +125,6 @@ let test_printer () =
     (If (BinOp (Var "n", Leq, Int 0), Bool true, Bool false))
     "if n <= 0 then true else false";
   shows (List [ Int 1; BinOp (Int 2, Mul, Int 3) ]) "[1; 2 * 3]";
-  (* Compound operands are parenthesised, so the output stays unambiguous *)
   shows (BinOp (Int 1, Sub, BinOp (Int 2, Sub, Int 3))) "1 - (2 - 3)"
 
 let tests =

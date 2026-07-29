@@ -2,7 +2,6 @@ open Nomad.Ast
 open Nomad.Subst
 open Nomad.Check
 
-(* Types bound by a run of statements, oldest binding first. *)
 let check_stmts stmts expected () =
   match List.fold_left check_stmt [] stmts with
   | env ->
@@ -16,7 +15,6 @@ let check_error stmts expected () =
   | _ -> Alcotest.fail "expected type error"
   | exception TypeError e -> Alcotest.(check string) "error message" expected e
 
-(* fun n -> if n = 0 then 1 else n * f (n - 1) *)
 let fact =
   Fun
     ( "n",
@@ -39,7 +37,6 @@ let test_rec () =
     ()
 
 let test_expr () =
-  (* An expression statement is checked but binds nothing. *)
   check_stmts
     [ LetStmt ("x", Int 1); ExprStmt (BinOp (Var "x", Add, Int 1)) ]
     [ "x : int" ] ()
@@ -55,7 +52,6 @@ let test_program () =
 
 let test_errors () =
   check_error [ ExprStmt (Var "x") ] "Unbound variable x" ();
-  (* Errors from an earlier statement are not swallowed by a later one. *)
   check_error
     [ LetStmt ("x", BinOp (Int 1, Add, Bool true)); LetStmt ("y", Int 2) ]
     "Type mismatch: bool and int" ()
