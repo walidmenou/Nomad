@@ -40,6 +40,29 @@ let test_bindings () =
   (* A binding shadows the earlier one of the same name. *)
   check_run "let x = 1\nlet x = 2\nlet y = x" [ "1"; "2"; "2" ] ()
 
+(* A statement ends at the next line that starts in the first column, so a
+   binding cannot swallow the statements that follow it. *)
+let test_layout () =
+  check_run "let id = fun x -> x\nid 1\nid true" [ "<fun>"; "1"; "true" ] ();
+  check_run "1 + 1\n2 + 2" [ "2"; "4" ] ();
+  (* An indented line carries on the statement above it. *)
+  check_run "let a =\n  1 +\n  2" [ "3" ] ();
+  check_run "let a =\n  let x = 1 in\n  x + 1" [ "2" ] ();
+  (* Blank lines are whitespace wherever they fall. *)
+  check_run "let a = 1\n\nlet b = 2" [ "1"; "2" ] ();
+  check_run "let a =\n  1 +\n\n  2" [ "3" ] ();
+  (* Leading and trailing whitespace is no obstacle. *)
+  check_run "\n\nlet a = 1\n\n" [ "1" ] ()
+
+(* Two semicolons end a statement outright, which is how to put more than one
+   on a line. *)
+let test_double_semicolon () =
+  check_run "let a = 1 ;; let b = 2" [ "1"; "2" ] ();
+  check_run "let a = 1 ;; a + 1 ;; a + 2" [ "1"; "2"; "3" ] ();
+  (* It stays optional, and a trailing one is harmless. *)
+  check_run "let a = 1 ;;" [ "1" ] ();
+  check_run "let a = 1\nlet b = 2 ;;" [ "1"; "2" ] ()
+
 let test_printing () =
   check_run "let s = \"hi\"" [ "\"hi\"" ] ();
   check_run "let u = ()" [ "()" ] ();
@@ -201,6 +224,8 @@ let test_examples () =
 let tests =
   [
     ("bindings", `Quick, test_bindings);
+    ("layout", `Quick, test_layout);
+    ("double semicolon", `Quick, test_double_semicolon);
     ("printing", `Quick, test_printing);
     ("arithmetic", `Quick, test_arithmetic);
     ("comparison", `Quick, test_comparison);

@@ -42,7 +42,22 @@ let sepby sep p =
   <|> return []
 
 let spaces = many (char ' ' <|> char '\n' <|> char '\t')
-let token p = p <<| spaces
+
+(* Whitespace within one statement. A newline belongs to it only when the line
+   that follows is indented, so a token in the first column always begins a new
+   statement and no expression can run past it. *)
+let rec inline_spaces input =
+  match input with
+  | (' ' | '\t') :: cs -> inline_spaces cs
+  | '\n' :: cs when indented cs -> inline_spaces cs
+  | _ -> Some ((), input)
+
+and indented = function
+  | (' ' | '\t') :: _ -> true
+  | '\n' :: cs -> indented cs
+  | _ -> false
+
+let token p = p <<| inline_spaces
 
 let nat =
   some digit |*> fun xs ->
@@ -258,7 +273,13 @@ let rec_stmt input =
 
 let expr_stmt input = (expr |*> fun exp -> return (ExprStmt exp)) input
 let statement input = (rec_stmt <|> let_stmt <|> expr_stmt) input
-let program input = many statement input
+
+(* Layout already ends a statement at the next line in the first column. Two
+   semicolons end one outright, which is the only way to put more than one on a
+   line, and they stay optional everywhere else. *)
+let program input =
+  let sep = maybe (keyword ";;") |>> spaces in
+  (spaces |>> many (statement <<| sep)) input
 
 let run p s =
   match p (explode s) with

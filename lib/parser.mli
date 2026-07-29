@@ -60,10 +60,17 @@ val integer : int t
     after it *)
 
 val spaces : char list t
-(** Parses a sequence of contiguous spaces *)
+(** Parses a sequence of contiguous whitespace, newlines included. Used between
+    statements, where a newline carries no meaning *)
+
+val inline_spaces : unit t
+(** Parses the whitespace that belongs to one statement. A newline is part of it
+    only when the line that follows is indented, so a token in the first column
+    always begins a new statement *)
 
 val token : 'a t -> 'a t
-(** Runs the parser and consumes all spaces that come after it *)
+(** Runs the parser and consumes the whitespace within a statement that comes
+    after it *)
 
 val keyword : string -> unit t
 (** Parses the given keyword string *)
@@ -180,4 +187,5 @@ val statement : statement t
 (** Parses a single statement *)
 
 val program : program t
-(** Parses a program consisting of a list of statements *)
+(** Parses a program consisting of a list of statements. One statement ends
+    where the next line begins in the first column, or at an optional `;;` *)
