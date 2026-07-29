@@ -81,7 +81,22 @@ let test_let_rec_expr () =
 let test_if_expr () =
   check_parse expr "if true then 1 else 0" (If (Bool true, Int 1, Int 0)) ()
 
-let test_fun_expr () = check_parse expr "fun x -> x" (Fun ("x", Var "x")) ()
+let test_fun_expr () =
+  check_parse expr "fun x -> x" (Fun ("x", Var "x")) ();
+  check_parse expr "fun x y -> x" (Fun ("x", Fun ("y", Var "x"))) ()
+
+let test_multi_argument () =
+  check_parse statement "let f x y = x"
+    (LetStmt ("f", Fun ("x", Fun ("y", Var "x"))))
+    ();
+  check_parse statement "let rec f x = x" (RecStmt ("f", Fun ("x", Var "x"))) ();
+  check_parse expr "let f x = x in f"
+    (Let ("f", Fun ("x", Var "x"), Var "f"))
+    ();
+  check_parse expr "let rec f x = x in f"
+    (Rec ("f", Fun ("x", Var "x"), Var "f"))
+    ();
+  check_parse statement "let x = 1" (LetStmt ("x", Int 1)) ()
 
 let test_app_expr () =
   check_parse expr "f x" (App (Var "f", Var "x")) ();
@@ -134,6 +149,7 @@ let tests =
     ("let rec", `Quick, test_let_rec_expr);
     ("if", `Quick, test_if_expr);
     ("functions", `Quick, test_fun_expr);
+    ("multi argument", `Quick, test_multi_argument);
     ("applications", `Quick, test_app_expr);
     ("pipe", `Quick, test_pipe_expr);
     ("match", `Quick, test_match_expr);

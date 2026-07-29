@@ -184,6 +184,7 @@ let chain_cmps op_p exp_p =
   |*> fun pairs -> return (cmp_helper first pairs)
 
 let pipe = keyword "|>"
+let curry params body = List.fold_right (fun p acc -> Fun (p, acc)) params body
 let nil_pat = keyword "[]" |>> return PatNil
 let wildcard_pat = keyword "_" |>> return PatWildcard
 let var_pat = ident |*> fun x -> return (PatVar x)
@@ -248,14 +249,16 @@ and if_expr input =
     input
 
 and fun_expr input =
-  ( keyword "fun" |>> ident |*> fun id ->
-    arrow |>> expr |*> fun exp -> return (Fun (id, exp)) )
+  ( keyword "fun" |>> some ident |*> fun params ->
+    arrow |>> expr |*> fun exp -> return (curry params exp) )
     input
 
 and let_expr input =
   ( keyword "let" |>> ident |*> fun id ->
+    many ident |*> fun params ->
     keyword "=" |>> expr |*> fun exp1 ->
-    keyword "in" |>> expr |*> fun exp2 -> return (Let (id, exp1, exp2)) )
+    keyword "in" |>> expr |*> fun exp2 ->
+    return (Let (id, curry params exp1, exp2)) )
     input
 
 and match_expr input =
@@ -269,18 +272,24 @@ and match_expr input =
 
 and let_rec_expr input =
   ( keyword "let" |>> keyword "rec" |>> ident |*> fun id ->
+    many ident |*> fun params ->
     keyword "=" |>> expr |*> fun exp1 ->
-    keyword "in" |>> expr |*> fun exp2 -> return (Rec (id, exp1, exp2)) )
+    keyword "in" |>> expr |*> fun exp2 ->
+    return (Rec (id, curry params exp1, exp2)) )
     input
 
 let let_stmt input =
   ( keyword "let" |>> ident |*> fun id ->
-    keyword "=" |>> expr |*> fun exp -> return (LetStmt (id, exp)) )
+    many ident |*> fun params ->
+    keyword "=" |>> expr |*> fun exp -> return (LetStmt (id, curry params exp))
+  )
     input
 
 let rec_stmt input =
   ( keyword "let" |>> keyword "rec" |>> ident |*> fun id ->
-    keyword "=" |>> expr |*> fun exp -> return (RecStmt (id, exp)) )
+    many ident |*> fun params ->
+    keyword "=" |>> expr |*> fun exp -> return (RecStmt (id, curry params exp))
+  )
     input
 
 let expr_stmt input = (expr |*> fun exp -> return (ExprStmt exp)) input

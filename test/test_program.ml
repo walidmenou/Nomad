@@ -211,6 +211,22 @@ let test_application () =
   check_run "let f = fun x -> x\nlet a = f [1; 2]" [ "<fun>"; "[1; 2]" ] ();
   check_run "let a = (fun x -> x * x) 4" [ "16" ] ()
 
+let test_multi_argument () =
+  check_run "let add a b = a + b\nlet r = add 1 2" [ "<fun>"; "3" ] ();
+  check_run "let f a b c = a + b + c\nlet r = f 1 2 3" [ "<fun>"; "6" ] ();
+  check_run "let add a b = a + b\nlet inc = add 1\nlet r = inc 5"
+    [ "<fun>"; "<fun>"; "6" ] ();
+  check_run "let a = let f x y = x * y in f 3 4" [ "12" ] ();
+  check_run "let a = (fun x y -> x + y) 1 2" [ "3" ] ();
+  check_run
+    "let rec gcd a b = if b = 0 then a else gcd b (a - (a / b) * b)\n\
+     let r = gcd 48 18"
+    [ "<fun>"; "6" ] ();
+  check_run
+    "let a = let rec go n acc = if n = 0 then acc else go (n - 1) (acc + n) in \
+     go 4 0"
+    [ "10" ] ()
+
 let test_closures () =
   check_run "let x = 1\nlet f = fun y -> x + y\nlet x = 100\nlet r = f 5"
     [ "1"; "<fun>"; "100"; "6" ]
@@ -297,6 +313,7 @@ let tests =
     ("conditional", `Quick, test_conditional);
     ("let", `Quick, test_let);
     ("application", `Quick, test_application);
+    ("multi argument", `Quick, test_multi_argument);
     ("closures", `Quick, test_closures);
     ("pipe", `Quick, test_pipe);
     ("recursion", `Quick, test_recursion);

@@ -1,20 +1,20 @@
-let rec concat = fun l1 -> fun l2 ->
+let rec concat l1 l2 =
   match l1 with
   [] -> l2
   | x :: xs -> x :: concat xs l2
 
-let rec quicksort = fun lst ->
+let rec quicksort lst =
   match lst with
   [] -> []
   | x :: xs ->
-      let rec filter_less = fun l ->
+      let rec filter_less l =
         match l with
         [] -> []
         | y :: ys ->
             if y <= x then y :: filter_less ys
             else filter_less ys
       in
-      let rec filter_greater = fun l ->
+      let rec filter_greater l =
         match l with
         [] -> []
         | y :: ys ->

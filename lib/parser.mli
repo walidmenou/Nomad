@@ -161,13 +161,15 @@ val cmp_expr : expr t
 (** Parses a chain of comaprisons, e.g: 0 <= x < 12 < 2 *)
 
 val let_expr : expr t
-(** Parses a `let ... = ... in ...` expression *)
+(** Parses a `let f x y = ... in ...` expression. Parameters after the name are
+    sugar for nested functions, so the binding is always to a single value *)
 
 val if_expr : expr t
 (** Parses an `if ... then ... else ...` expression *)
 
 val fun_expr : expr t
-(** Parses a lambda function expression *)
+(** Parses a lambda expression, e.g: `fun x y -> ...`. Several parameters are
+    sugar for a function that returns a function *)
 
 val app_expr : expr t
 (** Parses the application of a function f on an expression e *)
@@ -207,7 +209,7 @@ val pattern : pattern t
 (** Parses any pattern *)
 
 val let_rec_expr : expr t
-(** Parses a `let rec ... = ... in ...` expression *)
+(** Parses a `let rec f x y = ... in ...` expression *)
 
 val statement : statement t
 (** Parses a single statement *)
