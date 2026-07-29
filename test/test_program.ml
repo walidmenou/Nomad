@@ -165,6 +165,37 @@ let test_repeated_pattern_variable () =
   check_run "let a = match [1; 2] with x :: y :: rest -> x + y | _ -> 0" [ "3" ]
     ()
 
+let test_exhaustive_match () =
+  check_run "let a = match [1] with [] -> 0 | x :: xs -> x" [ "1" ] ();
+  check_run "let a = match true with true -> 1 | false -> 0" [ "1" ] ();
+  check_run "let a = match 5 with 1 -> 0 | _ -> 9" [ "9" ] ();
+  check_run "let a = match 5 with n -> n" [ "5" ] ();
+  check_run
+    "let a = match [1; 2] with [] -> 0 | x :: [] -> x | x :: y :: r -> x + y"
+    [ "3" ] ();
+  check_run
+    "let a = match [true] with [] -> 0 | true :: r -> 1 | false :: r -> 2"
+    [ "1" ] ();
+  check_run "let a = match () with _ -> 1" [ "1" ] ()
+
+let test_non_exhaustive_match () =
+  check_type_error "let a = match 5 with 1 -> 0" "This match is not exhaustive"
+    ();
+  check_type_error "let a = match true with true -> 1"
+    "This match is not exhaustive" ();
+  check_type_error "let a = match [1] with [] -> 0"
+    "This match is not exhaustive" ();
+  check_type_error "let a = match [1] with x :: xs -> x"
+    "This match is not exhaustive" ();
+  check_type_error "let a = match [1] with [] -> 0 | x :: [] -> x"
+    "This match is not exhaustive" ();
+  check_type_error "let a = match \"s\" with \"a\" -> 1 | \"b\" -> 2"
+    "This match is not exhaustive" ();
+  check_type_error "let a = match [1] with [] -> 0 | x :: y :: r -> 2"
+    "This match is not exhaustive" ();
+  check_type_error "let a = match [true] with [] -> 0 | true :: r -> 1"
+    "This match is not exhaustive" ()
+
 let test_conditional () =
   check_run "let a = if true then 1 else 2" [ "1" ] ();
   check_run "let a = if 1 < 0 then 1 else 2" [ "2" ] ();
@@ -228,7 +259,8 @@ let test_match () =
 
 let test_runtime_errors () =
   check_eval_error "let a = 1 / 0" "Division by zero" ();
-  check_eval_error "let a = match 5 with 1 -> 0" "Match failure" ()
+  check_eval_error "let a = match [1] with [] -> 0 | x :: xs -> 1 / 0"
+    "Division by zero" ()
 
 let test_type_errors () =
   check_type_error "let a = 1 + true" "Type mismatch: bool and int" ();
@@ -260,6 +292,8 @@ let tests =
     ("polymorphism", `Quick, test_polymorphism);
     ("monomorphic uses", `Quick, test_monomorphic_uses);
     ("repeated pattern variable", `Quick, test_repeated_pattern_variable);
+    ("exhaustive match", `Quick, test_exhaustive_match);
+    ("non exhaustive match", `Quick, test_non_exhaustive_match);
     ("conditional", `Quick, test_conditional);
     ("let", `Quick, test_let);
     ("application", `Quick, test_application);

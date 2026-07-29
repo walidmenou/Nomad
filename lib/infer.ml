@@ -150,6 +150,8 @@ let rec infer_w env e =
             Subst.compose (Subst.unify (Subst.apply s t_ret) t_body) s)
           s cases
       in
+      if not (Pat.exhaustive (Subst.apply s t_e) (List.map fst cases)) then
+        raise (Subst.TypeError "This match is not exhaustive");
       (s, Subst.apply s t_ret)
 
 and step s env e =
