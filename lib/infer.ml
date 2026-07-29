@@ -107,13 +107,9 @@ let rec infer_w env e =
       let s2, t2 = infer_w ((id, Subst.apply s1 t1) :: env') e2 in
       (Subst.compose s2 s1, t2)
   | Rec (id, e1, e2) ->
-      let t_rec = fresh () in
-      let s1, t1 = infer_w ((id, t_rec) :: env) e1 in
-      let s2 = Subst.unify (Subst.apply s1 t_rec) (Subst.apply s1 t1) in
-      let s_acc = Subst.compose s2 s1 in
-      let env' = Subst.apply_env s_acc env in
-      let s3, t2 = infer_w ((id, Subst.apply s_acc t1) :: env') e2 in
-      (Subst.compose s3 s_acc, t2)
+      let s, t1 = rec_binding env id e1 in
+      let s', t2 = infer_w ((id, t1) :: Subst.apply_env s env) e2 in
+      (Subst.compose s' s, t2)
   | List exprs ->
       let t_elem = fresh () in
       let s =
@@ -152,6 +148,17 @@ let rec infer_w env e =
 and step s env e =
   let s', t = infer_w (Subst.apply_env s env) e in
   (Subst.compose s' s, t)
+
+(* Infers a recursive binding [id = e]: [id] stands for a fresh type variable
+   while [e] is inferred, which is then unified with what [e] turned out to be.
+   Shared by the [Rec] expression and the [RecStmt] statement. *)
+and rec_binding env id e =
+  let t_rec = fresh () in
+  let s, t = infer_w ((id, t_rec) :: env) e in
+  let s =
+    Subst.compose (Subst.unify (Subst.apply s t_rec) (Subst.apply s t)) s
+  in
+  (s, Subst.apply s t)
 
 let infer env expr =
   let s, t = infer_w env expr in
