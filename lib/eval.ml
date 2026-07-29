@@ -86,6 +86,7 @@ and comp env qs body acc =
             acc vs
       | _ -> raise (EvaluationError "A generator needs a list"))
   | Guard e :: rest -> if truth env e then comp env rest body acc else acc
+  | QLet (id, e) :: rest -> comp ((id, eval env e) :: env) rest body acc
 
 and truth env e =
   match eval env e with

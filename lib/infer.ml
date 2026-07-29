@@ -178,6 +178,10 @@ and infer_qual s env q =
   | Guard e ->
       let s, t = step s env e in
       (Subst.compose (Subst.unify t TBool) s, apply_env s env)
+  | QLet (id, e) ->
+      let s, t = step s env e in
+      let env = apply_env s env in
+      (s, (id, generalize env (Subst.apply s t)) :: env)
 
 and step s env e =
   let s', t = infer_w (apply_env s env) e in

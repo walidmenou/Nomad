@@ -159,7 +159,7 @@ val list_expr : expr t
     upper bound is below its lower one *)
 
 val qualifier : qualifier t
-(** Parses one comprehension qualifier, either a generator or a guard.
+(** Parses one comprehension qualifier: a generator, a guard, or a `let`.
 
     A generator `p <- e` draws values from a list. Its pattern may be refutable,
     and a value the pattern rejects is skipped rather than being an error, which
@@ -167,8 +167,15 @@ val qualifier : qualifier t
     lists.
 
     A guard is any boolean expression, and it skips the qualifiers after it for
-    the value in hand. Generators are tried first, so `x <- xs` reads as a
-    generator while `x < xs` reads as a guard *)
+    the value in hand.
+
+    A `let x = e` names a value for the qualifiers after it and for the body. It
+    takes parameters like an ordinary binding, so `let f a b = e` works here
+    too.
+
+    The three are tried in that order, since a guard would otherwise swallow the
+    other two. `x <- xs` therefore reads as a generator while `x < xs` reads as
+    a guard *)
 
 val atom_expr : expr t
 (** Parses an atomic (i.e irreducile) expression, e.g: `x`, `(<expr>)`, `12` *)

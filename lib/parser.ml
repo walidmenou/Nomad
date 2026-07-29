@@ -240,7 +240,14 @@ and generator input =
     input
 
 and guard input = (expr |*> fun e -> return (Guard e)) input
-and qualifier input = (generator <|> guard) input
+
+and qual_let input =
+  ( keyword "let" |>> ident |*> fun id ->
+    many ident |*> fun params ->
+    keyword "=" |>> expr |*> fun e -> return (QLet (id, curry params e)) )
+    input
+
+and qualifier input = (qual_let <|> generator <|> guard) input
 
 and comp_body input =
   ( expr |*> fun body ->

@@ -103,6 +103,30 @@ let test_comprehension_guards () =
   check_run "let a = [x | x <- [1..4], x <> 2]" [ "[1; 3; 4]" ] ();
   check_type_fails "let a = [x | x <- [1..3], x]" ()
 
+let test_comprehension_let () =
+  check_run "let a = [y | x <- [1..3], let y = x * x]" [ "[1; 4; 9]" ] ();
+  check_run "let a = [y | x <- [1..5], let y = x * x, y > 8]" [ "[9; 16; 25]" ]
+    ();
+  check_run "let a = [y + z | x <- [1..2], let y = x + 1, let z = y * 2]"
+    [ "[6; 9]" ] ();
+  check_run "let a = [y | x <- [1..2], let y = x, y <- [1..y]]" [ "[1; 1; 2]" ]
+    ();
+  check_run "let x = 100\nlet a = [x | y <- [1], let x = 1]" [ "100"; "[1]" ] ()
+
+let test_comprehension_programs () =
+  check_run
+    "let a = [[x; y; z] | z <- [1..13], y <- [1..z], x <- [1..y], x * x + y * \
+     y = z * z]"
+    [ "[[3; 4; 5]; [6; 8; 10]; [5; 12; 13]]" ]
+    ();
+  check_run "let a = [x | r <- [[1; 2]; [3]; []], x <- r]" [ "[1; 2; 3]" ] ();
+  check_run
+    "let rec any p l = match l with [] -> false | x :: r -> p x || any p r\n\
+     let a = [n | n <- [2..12], any (fun d -> n / d * d = n) [2..n - 1] = \
+     false]"
+    [ "<fun>"; "[2; 3; 5; 7; 11]" ]
+    ()
+
 let test_comprehension_body () =
   check_run "let a = [match x with 0 -> 9 | n -> n | x <- [0; 1; 2]]"
     [ "[9; 1; 2]" ] ();
@@ -361,6 +385,8 @@ let tests =
     ("nested generators", `Quick, test_nested_generators);
     ("generator patterns", `Quick, test_generator_patterns);
     ("comprehension guards", `Quick, test_comprehension_guards);
+    ("comprehension let", `Quick, test_comprehension_let);
+    ("comprehension programs", `Quick, test_comprehension_programs);
     ("comprehension body", `Quick, test_comprehension_body);
     ("comprehension types", `Quick, test_comprehension_types);
     ("printing", `Quick, test_printing);
