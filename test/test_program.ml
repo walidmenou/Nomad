@@ -62,6 +62,25 @@ let test_comparison () =
   check_run "let x = 3\nlet a = 0 <= x < 5" [ "3"; "true" ] ();
   check_run "let x = 9\nlet a = 0 <= x < 5" [ "9"; "false" ] ()
 
+(* Equality looks at the whole value, whatever its type. *)
+let test_equality () =
+  check_run "let a = \"x\" = \"x\"" [ "true" ] ();
+  check_run "let a = \"x\" = \"y\"" [ "false" ] ();
+  check_run "let a = () = ()" [ "true" ] ();
+  check_run "let a = [1; 2] = [1; 2]" [ "true" ] ();
+  check_run "let a = [1; 2] = [1; 3]" [ "false" ] ();
+  (* Lists of different lengths differ rather than raising. *)
+  check_run "let a = [1] = [1; 2]" [ "false" ] ();
+  check_run "let a = [[1]; [2]] = [[1]; [2]]" [ "true" ] ();
+  check_run "let a = [] = []" [ "true" ] ()
+
+(* Two functions cannot be compared by looking at them. *)
+let test_function_equality () =
+  check_eval_error "let f = fun x -> x\nlet a = f = f"
+    "Cannot compare functions" ();
+  check_eval_error "let f = fun x -> x\nlet a = [f] = [f]"
+    "Cannot compare functions" ()
+
 let test_conditional () =
   check_run "let a = if true then 1 else 2" [ "1" ] ();
   check_run "let a = if 1 < 0 then 1 else 2" [ "2" ] ();
@@ -153,6 +172,8 @@ let tests =
     ("printing", `Quick, test_printing);
     ("arithmetic", `Quick, test_arithmetic);
     ("comparison", `Quick, test_comparison);
+    ("equality", `Quick, test_equality);
+    ("function equality", `Quick, test_function_equality);
     ("conditional", `Quick, test_conditional);
     ("let", `Quick, test_let);
     ("application", `Quick, test_application);

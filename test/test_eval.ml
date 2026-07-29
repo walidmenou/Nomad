@@ -50,6 +50,18 @@ let test_compare () =
   check_eval [] (BinOp (Bool true, And, Bool false)) (VBool false) ();
   check_eval [] (BinOp (Bool true, Or, Bool false)) (VBool true) ()
 
+(* <> has no concrete syntax yet, so this is the only place it is reachable. *)
+let test_equality () =
+  check_eval [] (BinOp (String "a", Equal, String "a")) (VBool true) ();
+  check_eval [] (BinOp (Unit, Equal, Unit)) (VBool true) ();
+  check_eval [] (BinOp (List [ Int 1 ], Equal, List [ Int 1 ])) (VBool true) ();
+  check_eval [] (BinOp (Int 1, Diff, Int 2)) (VBool true) ();
+  check_eval [] (BinOp (String "a", Diff, String "a")) (VBool false) ();
+  check_eval [] (BinOp (List [ Int 1 ], Diff, List [ Int 2 ])) (VBool true) ();
+  check_error []
+    (BinOp (Fun ("x", Var "x"), Equal, Fun ("x", Var "x")))
+    "Cannot compare functions" ()
+
 let test_if () =
   check_eval [] (If (Bool true, Int 1, Int 2)) (VInt 1) ();
   check_eval [] (If (Bool false, Int 1, Int 2)) (VInt 2) ();
@@ -139,6 +151,7 @@ let tests =
     ("variables", `Quick, test_var);
     ("arithmetic", `Quick, test_arith);
     ("comparison", `Quick, test_compare);
+    ("equality", `Quick, test_equality);
     ("if", `Quick, test_if);
     ("let", `Quick, test_let);
     ("application", `Quick, test_app);

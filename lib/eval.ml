@@ -92,12 +92,21 @@ and binop op v1 v2 =
   | Geq, VInt a, VInt b -> VBool (a >= b)
   | And, VBool a, VBool b -> VBool (a && b)
   | Or, VBool a, VBool b -> VBool (a || b)
-  | Equal, VInt a, VInt b -> VBool (a = b)
-  | Diff, VInt a, VInt b -> VBool (a <> b)
-  | Equal, VBool a, VBool b -> VBool (a = b)
-  | Diff, VBool a, VBool b -> VBool (a <> b)
   | Cons, v, VList vs -> VList (v :: vs)
+  | Equal, _, _ -> VBool (equal v1 v2)
+  | Diff, _, _ -> VBool (not (equal v1 v2))
   | _ -> raise (EvaluationError "Type mismatch in binary operation")
+
+(* Structural, so two values of the same type are equal when they are built the
+   same way. Functions are the exception, since looking at the code cannot
+   decide whether two of them agree. *)
+and equal v1 v2 =
+  match (v1, v2) with
+  | (VClos _ | VRecClos _), _ | _, (VClos _ | VRecClos _) ->
+      raise (EvaluationError "Cannot compare functions")
+  | VList vs1, VList vs2 ->
+      List.length vs1 = List.length vs2 && List.for_all2 equal vs1 vs2
+  | _ -> v1 = v2
 
 let eval_stmt env stmt =
   match stmt with
