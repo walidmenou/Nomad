@@ -98,6 +98,13 @@ let test_multi_argument () =
     ();
   check_parse statement "let x = 1" (LetStmt ("x", Int 1)) ()
 
+let test_range () =
+  check_parse expr "[1..5]" (Range (Int 1, Int 5)) ();
+  check_parse expr "[a..b]" (Range (Var "a", Var "b")) ();
+  check_parse expr "[1..n - 1]" (Range (Int 1, BinOp (Var "n", Sub, Int 1))) ();
+  check_parse expr "[1; 2]" (List [ Int 1; Int 2 ]) ();
+  check_parse expr "[]" (List []) ()
+
 let test_app_expr () =
   check_parse expr "f x" (App (Var "f", Var "x")) ();
   check_parse expr "f x y" (App (App (Var "f", Var "x"), Var "y")) ()
@@ -150,6 +157,7 @@ let tests =
     ("if", `Quick, test_if_expr);
     ("functions", `Quick, test_fun_expr);
     ("multi argument", `Quick, test_multi_argument);
+    ("range", `Quick, test_range);
     ("applications", `Quick, test_app_expr);
     ("pipe", `Quick, test_pipe_expr);
     ("match", `Quick, test_match_expr);

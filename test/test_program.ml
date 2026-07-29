@@ -57,6 +57,15 @@ let test_comments () =
   check_run "-- nothing at all" [] ();
   check_run "let s = \"a--b\"" [ "\"a--b\"" ] ()
 
+let test_range () =
+  check_run "let a = [1..5]" [ "[1; 2; 3; 4; 5]" ] ();
+  check_run "let a = [3..3]" [ "[3]" ] ();
+  check_run "let a = [5..1]" [ "[]" ] ();
+  check_run "let a = [-2..2]" [ "[-2; -1; 0; 1; 2]" ] ();
+  check_run "let n = 4\nlet a = [1..n - 1]" [ "4"; "[1; 2; 3]" ] ();
+  check_run "let a = 0 :: [1..3]" [ "[0; 1; 2; 3]" ] ();
+  check_type_error "let a = [1..true]" "Type mismatch: bool and int" ()
+
 let test_printing () =
   check_run "let s = \"hi\"" [ "\"hi\"" ] ();
   check_run "let u = ()" [ "()" ] ();
@@ -295,6 +304,7 @@ let tests =
     ("layout", `Quick, test_layout);
     ("double semicolon", `Quick, test_double_semicolon);
     ("comments", `Quick, test_comments);
+    ("range", `Quick, test_range);
     ("printing", `Quick, test_printing);
     ("arithmetic", `Quick, test_arithmetic);
     ("unary minus", `Quick, test_unary_minus);

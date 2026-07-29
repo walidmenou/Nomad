@@ -45,6 +45,11 @@ let rec eval env e =
   | If (cond, e1, e2) -> if truth env cond then eval env e1 else eval env e2
   | App (e1, e2) -> apply (eval env e1) (eval env e2)
   | List exprs -> VList (List.map (eval env) exprs)
+  | Range (e1, e2) -> (
+      match (eval env e1, eval env e2) with
+      | VInt lo, VInt hi ->
+          VList (List.init (max 0 (hi - lo + 1)) (fun i -> VInt (lo + i)))
+      | _ -> raise (EvaluationError "A range needs two integers"))
   | Match (e, cases) -> try_match env cases (eval env e)
 
 and apply f arg =

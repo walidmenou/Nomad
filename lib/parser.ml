@@ -234,10 +234,16 @@ and app_expr input =
     return (List.fold_left (fun acc arg -> App (acc, arg)) f args) )
     input
 
-and list_expr input =
-  ( between (token (char '[')) (token (char ']')) (sepby (token (char ';')) expr)
-  |*> fun exprs -> return (List exprs) )
+and range_body input =
+  ( expr |*> fun lo ->
+    keyword ".." |>> expr |*> fun hi -> return (Range (lo, hi)) )
     input
+
+and list_body input =
+  (sepby (token (char ';')) expr |*> fun exprs -> return (List exprs)) input
+
+and list_expr input =
+  between (token (char '[')) (token (char ']')) (range_body <|> list_body) input
 
 and atom_expr input =
   (lit_expr <|> var_expr <|> list_expr <|> parenthesized expr) input

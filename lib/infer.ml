@@ -134,6 +134,11 @@ let rec infer_w env e =
           [] exprs
       in
       (s, TList (Subst.apply s t_elem))
+  | Range (e1, e2) ->
+      let s1, t1 = infer_w env e1 in
+      let s = Subst.compose (Subst.unify t1 TInt) s1 in
+      let s, t2 = step s env e2 in
+      (Subst.compose (Subst.unify t2 TInt) s, TList TInt)
   | Match (e, cases) ->
       let s, t_e = infer_w env e in
       let t_ret = fresh () in

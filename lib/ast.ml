@@ -47,6 +47,7 @@ type expr =
   | Fun of ident * expr
   | App of expr * expr
   | List of expr list
+  | Range of expr * expr
   | Match of expr * (pattern * expr) list
 
 type statement =
@@ -106,6 +107,7 @@ let rec string_of_expr = function
   | Rec (id, e1, e2) ->
       "let rec " ^ id ^ " = " ^ string_of_expr e1 ^ " in " ^ string_of_expr e2
   | List exprs -> "[" ^ String.concat "; " (List.map string_of_expr exprs) ^ "]"
+  | Range (e1, e2) -> "[" ^ string_of_expr e1 ^ ".." ^ string_of_expr e2 ^ "]"
   | Match (e, cases) ->
       let case (pat, body) = string_of_pat pat ^ " -> " ^ string_of_expr body in
       "match " ^ string_of_expr e ^ " with "
@@ -113,5 +115,6 @@ let rec string_of_expr = function
 
 and atom e =
   match e with
-  | Int _ | Bool _ | String _ | Unit | Var _ | List _ -> string_of_expr e
+  | Int _ | Bool _ | String _ | Unit | Var _ | List _ | Range _ ->
+      string_of_expr e
   | _ -> "(" ^ string_of_expr e ^ ")"

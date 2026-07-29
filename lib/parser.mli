@@ -152,7 +152,9 @@ val lit_expr : expr t
 (** Parses a literal, e.g: 12, true or () *)
 
 val list_expr : expr t
-(** Parses a list expression *)
+(** Parses a bracketed expression, either a list literal `[e; ...; e]` or an
+    inclusive integer range `[a..b]`. The range is empty when its upper bound is
+    below its lower one *)
 
 val atom_expr : expr t
 (** Parses an atomic (i.e irreducile) expression, e.g: `x`, `(<expr>)`, `12` *)
