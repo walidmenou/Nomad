@@ -37,7 +37,12 @@ let test_arith () =
   check_eval [] (BinOp (Int 1, Sub, Int 2)) (VInt (-1)) ();
   check_eval [] (BinOp (Int 3, Mul, Int 4)) (VInt 12) ();
   check_eval [] (BinOp (Int 7, Div, Int 2)) (VInt 3) ();
-  check_error [] (BinOp (Int 1, Div, Int 0)) "Division by zero" ()
+  check_eval [] (BinOp (Int 7, Mod, Int 2)) (VInt 1) ();
+  check_eval [] (BinOp (Int 6, Mod, Int 3)) (VInt 0) ();
+  check_eval [] (BinOp (Int (-7), Mod, Int 3)) (VInt (-1)) ();
+  check_eval [] (BinOp (Int 7, Mod, Int (-3))) (VInt 1) ();
+  check_error [] (BinOp (Int 1, Div, Int 0)) "Division by zero" ();
+  check_error [] (BinOp (Int 1, Mod, Int 0)) "Division by zero" ()
 
 let test_compare () =
   check_eval [] (BinOp (Int 1, Less, Int 2)) (VBool true) ();

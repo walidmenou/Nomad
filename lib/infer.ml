@@ -1,4 +1,5 @@
 open Ast
+open Pretty
 
 type scheme = Forall of int list * typ
 type env = (ident * scheme) list
@@ -35,7 +36,7 @@ let instantiate (Forall (qs, t)) =
 
 let infer_binop op t1 t2 =
   match op with
-  | Add | Sub | Mul | Div ->
+  | Add | Sub | Mul | Div | Mod ->
       let s1 = Subst.unify t1 TInt in
       let s2 = Subst.unify (Subst.apply s1 t2) TInt in
       (Subst.compose s2 s1, TInt)

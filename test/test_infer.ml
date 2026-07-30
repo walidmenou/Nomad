@@ -1,6 +1,7 @@
 open Nomad.Ast
 open Nomad.Subst
 open Nomad.Infer
+open Nomad.Pretty
 
 let check_type env expr expected () =
   try
@@ -141,7 +142,8 @@ let test_printer () =
     (If (BinOp (Var "n", Leq, Int 0), Bool true, Bool false))
     "if n <= 0 then true else false";
   shows (List [ Int 1; BinOp (Int 2, Mul, Int 3) ]) "[1; 2 * 3]";
-  shows (BinOp (Int 1, Sub, BinOp (Int 2, Sub, Int 3))) "1 - (2 - 3)"
+  shows (BinOp (Int 1, Sub, BinOp (Int 2, Sub, Int 3))) "1 - (2 - 3)";
+  shows (BinOp (Int 7, Mod, Int 3)) "7 % 3"
 
 let tests =
   [

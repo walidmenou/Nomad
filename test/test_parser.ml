@@ -61,6 +61,18 @@ let test_precedence () =
     ();
   check_parse expr "a <> b" (BinOp (Var "a", Diff, Var "b")) ()
 
+let test_modulo () =
+  check_parse expr "7 % 3" (BinOp (Int 7, Mod, Int 3)) ();
+  check_parse expr "2 + 7 % 3"
+    (BinOp (Int 2, Add, BinOp (Int 7, Mod, Int 3)))
+    ();
+  check_parse expr "7 % 3 * 2"
+    (BinOp (BinOp (Int 7, Mod, Int 3), Mul, Int 2))
+    ();
+  check_parse expr "10 % 4 % 3"
+    (BinOp (BinOp (Int 10, Mod, Int 4), Mod, Int 3))
+    ()
+
 let test_unary_minus () =
   check_parse expr "-x" (BinOp (Int 0, Sub, Var "x")) ();
   check_parse expr "-x * y"
@@ -178,6 +190,7 @@ let tests =
     ("arithmetic", `Quick, test_arith_expr);
     ("comparisons", `Quick, test_cmp_expr);
     ("precedence", `Quick, test_precedence);
+    ("modulo", `Quick, test_modulo);
     ("unary minus", `Quick, test_unary_minus);
     ("let", `Quick, test_let_expr);
     ("let rec", `Quick, test_let_rec_expr);

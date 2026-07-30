@@ -141,7 +141,10 @@ let addop =
   keyword "+" |*> (fun _ -> return Add) <|> (keyword "-" |*> fun _ -> return Sub)
 
 let mulop =
-  keyword "*" |*> (fun _ -> return Mul) <|> (keyword "/" |*> fun _ -> return Div)
+  keyword "*"
+  |*> (fun _ -> return Mul)
+  <|> (keyword "/" |*> fun _ -> return Div)
+  <|> (keyword "%" |*> fun _ -> return Mod)
 
 let orop = keyword "||" |*> fun _ -> return Or
 let andop = keyword "&&" |*> fun _ -> return And

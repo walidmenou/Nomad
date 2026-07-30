@@ -1,4 +1,5 @@
 open Ast
+open Pretty
 
 exception TypeError of string
 

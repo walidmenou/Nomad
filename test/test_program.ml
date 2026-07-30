@@ -212,6 +212,15 @@ let test_arithmetic () =
   check_run "let a = 0 - 7 / 2" [ "-3" ] ();
   check_run "let a = 1 - 2 - 3" [ "-4" ] ()
 
+let test_modulo () =
+  check_run "let a = 7 % 3" [ "1" ] ();
+  check_run "let a = 2 + 7 % 3" [ "3" ] ();
+  check_run "let a = 7 % 3 * 2" [ "2" ] ();
+  check_run "let even n = n % 2 = 0\nlet a = [x | x <- [1..10], even x]"
+    [ "<fun> : int -> bool"; "[2; 4; 6; 8; 10]" ]
+    ();
+  check_eval_error "let a = 1 % 0" "Division by zero" ()
+
 let test_unary_minus () =
   check_run "let a = -5" [ "-5" ] ();
   check_run "let x = 3\nlet a = -x" [ "3"; "-3" ] ();
@@ -498,6 +507,7 @@ let tests =
     ("parenthesised patterns", `Quick, test_parenthesised_patterns);
     ("printing", `Quick, test_printing);
     ("arithmetic", `Quick, test_arithmetic);
+    ("modulo", `Quick, test_modulo);
     ("unary minus", `Quick, test_unary_minus);
     ("minus spacing", `Quick, test_minus_spacing);
     ("comparison", `Quick, test_comparison);

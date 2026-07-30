@@ -2,6 +2,7 @@ open Nomad.Ast
 open Nomad.Subst
 open Nomad.Check
 open Nomad.Infer
+open Nomad.Pretty
 
 let bind env stmt = fst (check_stmt env stmt)
 

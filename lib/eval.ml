@@ -1,4 +1,5 @@
 open Ast
+open Pretty
 
 exception EvaluationError of string
 
@@ -107,8 +108,9 @@ and binop op v1 v2 =
   | Add, VInt a, VInt b -> VInt (a + b)
   | Sub, VInt a, VInt b -> VInt (a - b)
   | Mul, VInt a, VInt b -> VInt (a * b)
-  | Div, VInt _, VInt 0 -> raise (EvaluationError "Division by zero")
+  | (Div | Mod), VInt _, VInt 0 -> raise (EvaluationError "Division by zero")
   | Div, VInt a, VInt b -> VInt (a / b)
+  | Mod, VInt a, VInt b -> VInt (a mod b)
   | Less, VInt a, VInt b -> VBool (a < b)
   | Leq, VInt a, VInt b -> VBool (a <= b)
   | Greater, VInt a, VInt b -> VBool (a > b)

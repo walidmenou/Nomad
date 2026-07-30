@@ -4,7 +4,7 @@ open Nomad.Check
 open Nomad.Eval
 
 let repl () =
-  print_endline "Nomad REPL v1.0.0 (Type 'exit' or Ctrl+D to quit)";
+  print_endline "Nomad REPL (Type 'exit' or Ctrl+D to quit)";
   let rec loop type_env eval_env =
     print_string ">> ";
     flush stdout;
