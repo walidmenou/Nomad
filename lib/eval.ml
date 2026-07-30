@@ -26,6 +26,13 @@ let rec match_pattern pat v =
       match (match_pattern p1 h, match_pattern p2 (VList t)) with
       | Some b1, Some b2 -> Some (b1 @ b2)
       | _ -> None)
+  | PatTuple ps, VTuple vs when List.length ps = List.length vs ->
+      List.fold_left2
+        (fun acc p v ->
+          match (acc, match_pattern p v) with
+          | Some b, Some b' -> Some (b @ b')
+          | _ -> None)
+        (Some []) ps vs
   | _, _ -> None
 
 let rec eval env e =

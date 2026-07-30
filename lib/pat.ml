@@ -1,10 +1,17 @@
 open Ast
 
-type head = HNil | HCons | HInt of int | HBool of bool | HStr of string
+type head =
+  | HNil
+  | HCons
+  | HTuple of int
+  | HInt of int
+  | HBool of bool
+  | HStr of string
 
 let head_of = function
   | PatNil -> Some HNil
   | PatCons _ -> Some HCons
+  | PatTuple ps -> Some (HTuple (List.length ps))
   | PatInt n -> Some (HInt n)
   | PatBool b -> Some (HBool b)
   | PatString s -> Some (HStr s)
@@ -14,6 +21,7 @@ let sub_types h t =
   match (h, t) with
   | HCons, TList e -> [ e; TList e ]
   | HCons, _ -> [ TVar 0; t ]
+  | HTuple _, TTuple ts -> ts
   | _ -> []
 
 let wildcards n = List.init n (fun _ -> PatWildcard)
@@ -21,6 +29,7 @@ let wildcards n = List.init n (fun _ -> PatWildcard)
 let specialize h n rows =
   let row = function
     | PatCons (p1, p2) :: ps when h = HCons -> Some (p1 :: p2 :: ps)
+    | PatTuple qs :: ps when h = HTuple (List.length qs) -> Some (qs @ ps)
     | (PatWildcard | PatVar _) :: ps -> Some (wildcards n @ ps)
     | p :: ps when head_of p = Some h -> Some ps
     | _ -> None
@@ -39,6 +48,7 @@ let complete t hs =
   match t with
   | TBool -> List.mem (HBool true) hs && List.mem (HBool false) hs
   | TList _ -> List.mem HNil hs && List.mem HCons hs
+  | TTuple ts -> List.mem (HTuple (List.length ts)) hs
   | _ -> false
 
 let rec useful types rows q =

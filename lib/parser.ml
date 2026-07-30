@@ -191,10 +191,9 @@ let int_pat = integer |*> fun i -> return (PatInt i)
 let bool_pat = boolean |*> fun b -> return (PatBool b)
 let string_pat = token (string |*> fun s -> return (PatString s))
 
-let atom_pat =
-  nil_pat <|> wildcard_pat <|> bool_pat <|> var_pat <|> int_pat <|> string_pat
+let rec pattern input = chain_right_pat (keyword "::") atom_pat input
 
-let rec chain_right_pat op_p exp_p input =
+and chain_right_pat op_p exp_p input =
   ( exp_p |*> fun first ->
     op_p
     |*> (fun _ ->
@@ -202,7 +201,19 @@ let rec chain_right_pat op_p exp_p input =
     <|> return first )
     input
 
-let pattern input = chain_right_pat (keyword "::") atom_pat input
+and paren_pat input =
+  ( between
+      (token (char '('))
+      (token (char ')'))
+      (sepby (token (char ',')) pattern)
+  |*> fun ps ->
+    match ps with [] -> none | [ p ] -> return p | _ -> return (PatTuple ps) )
+    input
+
+and atom_pat input =
+  (nil_pat <|> wildcard_pat <|> bool_pat <|> var_pat <|> int_pat <|> string_pat
+ <|> paren_pat)
+    input
 
 let rec expr input =
   (if_expr <|> fun_expr <|> let_rec_expr <|> let_expr <|> match_expr <|> or_expr)

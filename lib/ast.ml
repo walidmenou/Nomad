@@ -33,6 +33,7 @@ type pattern =
   | PatBool of bool
   | PatString of string
   | PatCons of pattern * pattern
+  | PatTuple of pattern list
   | PatNil
 
 type expr =
@@ -95,6 +96,7 @@ let rec string_of_pat = function
   | PatString s -> "\"" ^ s ^ "\""
   | PatNil -> "[]"
   | PatCons (p1, p2) -> string_of_pat p1 ^ " :: " ^ string_of_pat p2
+  | PatTuple ps -> "(" ^ String.concat ", " (List.map string_of_pat ps) ^ ")"
 
 let rec string_of_expr = function
   | Int i -> string_of_int i

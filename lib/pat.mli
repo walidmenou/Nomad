@@ -9,4 +9,7 @@ val exhaustive : typ -> pattern list -> bool
     The type decides which sets of constructors are complete. Both booleans make
     a set complete, as do [[]] and [::] together, while integers and strings are
     too many to ever cover without a wildcard, and a type with no pattern form
-    of its own can only be matched by one *)
+    of its own can only be matched by one.
+
+    A tuple has just one constructor, so a single tuple pattern of the right
+    width covers the type and the question moves to its parts *)

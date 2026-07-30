@@ -165,6 +165,35 @@ let test_tuple_types () =
   check_type_fails "let a = (1, 2) = (1, true)" ();
   check_type_fails "let a = (1, 2) = (1, 2, 3)" ()
 
+let test_tuple_patterns () =
+  check_run "let fst p = match p with (a, b) -> a\nlet a = fst (1, 2)"
+    [ "<fun>"; "1" ] ();
+  check_run "let snd p = match p with (a, b) -> b\nlet a = snd (1, \"s\")"
+    [ "<fun>"; "\"s\"" ] ();
+  check_run "let a = match (1, 2, 3) with (x, y, z) -> x + y + z" [ "6" ] ();
+  check_run "let a = match ((1, 2), 3) with ((x, y), z) -> x + y + z" [ "6" ] ();
+  check_run "let a = match (1, 2) with (1, y) -> y | _ -> 0" [ "2" ] ();
+  check_run "let a = match (5, 2) with (1, y) -> y | (x, y) -> x * y" [ "10" ]
+    ();
+  check_run "let a = [a + b | (a, b) <- [(1, 2); (3, 4)]]" [ "[3; 7]" ] ()
+
+let test_tuple_exhaustiveness () =
+  check_run "let a = match (1, 2) with (x, y) -> x" [ "1" ] ();
+  check_run "let a = match (true, 1) with (true, y) -> y | (false, y) -> 0"
+    [ "1" ] ();
+  check_type_error "let a = match (true, 1) with (true, y) -> y"
+    "This match is not exhaustive" ();
+  check_type_error "let a = match (1, 2) with (1, y) -> y"
+    "This match is not exhaustive" ();
+  check_type_fails "let a = match (1, 2) with (x, y, z) -> x" ();
+  check_type_error "let a = match (1, 2) with (x, x) -> x"
+    "x is bound twice in the same pattern" ()
+
+let test_parenthesised_patterns () =
+  check_run "let a = match [1; 2] with (x :: xs) -> x | [] -> 0" [ "1" ] ();
+  check_run "let a = match [[1; 2]] with (x :: xs) :: r -> x | _ -> 0" [ "1" ]
+    ()
+
 let test_printing () =
   check_run "let s = \"hi\"" [ "\"hi\"" ] ();
   check_run "let u = ()" [ "()" ] ();
@@ -429,6 +458,9 @@ let tests =
     ("tuple", `Quick, test_tuple);
     ("tuple equality", `Quick, test_tuple_equality);
     ("tuple types", `Quick, test_tuple_types);
+    ("tuple patterns", `Quick, test_tuple_patterns);
+    ("tuple exhaustiveness", `Quick, test_tuple_exhaustiveness);
+    ("parenthesised patterns", `Quick, test_parenthesised_patterns);
     ("printing", `Quick, test_printing);
     ("arithmetic", `Quick, test_arithmetic);
     ("unary minus", `Quick, test_unary_minus);

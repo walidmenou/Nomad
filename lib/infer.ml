@@ -75,6 +75,9 @@ let rec infer_pat pat =
       let b2, t2 = infer_pat p2 in
       let s = Subst.unify t2 (TList t1) in
       (join b1 b2, Subst.apply s t2)
+  | PatTuple ps ->
+      let bs, ts = List.split (List.map infer_pat ps) in
+      (List.fold_left join [] bs, TTuple ts)
 
 let rec infer_w env e =
   match e with

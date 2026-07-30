@@ -231,6 +231,11 @@ val bool_pat : pattern t
 val string_pat : pattern t
 (** Parses a string pattern *)
 
+val paren_pat : pattern t
+(** Parses a parenthesised pattern. One part is just that pattern, which is how
+    a cons pattern gets grouped inside another, and two or more parts separated
+    by commas make a tuple pattern *)
+
 val pattern : pattern t
 (** Parses any pattern *)
 
