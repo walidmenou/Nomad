@@ -1,0 +1,15 @@
+-- Primes up to n by trial division.
+-- The guard rejects any x that some smaller number divides.
+
+let not b = if b then false else true
+
+let rec any p l =
+  match l with
+  [] -> false
+  | x :: xs -> p x || any p xs
+
+let divides d x = x / d * d = x
+
+let primes n = [x | x <- [2..n], not (any (fun d -> divides d x) [2..x - 1])]
+
+let result = primes 30
