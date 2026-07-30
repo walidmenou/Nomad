@@ -7,20 +7,8 @@ let rec quicksort lst =
   match lst with
   [] -> []
   | x :: xs ->
-      let rec filter_less l =
-        match l with
-        [] -> []
-        | y :: ys ->
-            if y <= x then y :: filter_less ys
-            else filter_less ys
-      in
-      let rec filter_greater l =
-        match l with
-        [] -> []
-        | y :: ys ->
-            if y > x then y :: filter_greater ys
-            else filter_greater ys
-      in
-      concat (quicksort (filter_less xs)) (x :: quicksort (filter_greater xs))
+      concat
+        (quicksort [y | y <- xs, y <= x])
+        (x :: quicksort [y | y <- xs, y > x])
 
 let result = quicksort [5; 2; 9; 1; 5; 6]
