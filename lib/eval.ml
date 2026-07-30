@@ -8,6 +8,7 @@ type value =
   | VString of string
   | VUnit
   | VList of value list
+  | VTuple of value list
   | VClos of ident * expr * env
   | VRecClos of ident * ident * expr * env
 
@@ -45,6 +46,7 @@ let rec eval env e =
   | If (cond, e1, e2) -> if truth env cond then eval env e1 else eval env e2
   | App (e1, e2) -> apply (eval env e1) (eval env e2)
   | List exprs -> VList (List.map (eval env) exprs)
+  | Tuple exprs -> VTuple (List.map (eval env) exprs)
   | Comp (body, qs) -> VList (List.rev (comp env qs body []))
   | Range (e1, e2) -> (
       match (eval env e1, eval env e2) with
@@ -113,7 +115,7 @@ and equal v1 v2 =
   match (v1, v2) with
   | (VClos _ | VRecClos _), _ | _, (VClos _ | VRecClos _) ->
       raise (EvaluationError "Cannot compare functions")
-  | VList vs1, VList vs2 ->
+  | (VList vs1 | VTuple vs1), (VList vs2 | VTuple vs2) ->
       List.length vs1 = List.length vs2 && List.for_all2 equal vs1 vs2
   | _ -> v1 = v2
 
@@ -133,6 +135,7 @@ let rec show_val = function
   | VString s -> "\"" ^ s ^ "\""
   | VUnit -> "()"
   | VList vs -> "[" ^ String.concat "; " (List.map show_val vs) ^ "]"
+  | VTuple vs -> "(" ^ String.concat ", " (List.map show_val vs) ^ ")"
   | VClos _ | VRecClos _ -> "<fun>"
 
 let run_program stmts =

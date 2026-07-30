@@ -8,6 +8,7 @@ type value =
   | VString of string
   | VUnit
   | VList of value list
+  | VTuple of value list
   | VClos of ident * expr * env
   | VRecClos of ident * ident * expr * env
       (** What an expression evaluates to. A closure carries the environment its

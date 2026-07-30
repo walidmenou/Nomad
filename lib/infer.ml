@@ -14,6 +14,7 @@ let rec vars = function
   | TVar v -> [ v ]
   | TArrow (t1, t2) -> vars t1 @ vars t2
   | TList t -> vars t
+  | TTuple ts -> List.concat_map vars ts
   | _ -> []
 
 let mono t = Forall ([], t)
@@ -134,6 +135,15 @@ let rec infer_w env e =
           [] exprs
       in
       (s, TList (Subst.apply s t_elem))
+  | Tuple exprs ->
+      let s, ts =
+        List.fold_left
+          (fun (s, ts) e ->
+            let s, t = step s env e in
+            (s, t :: ts))
+          ([], []) exprs
+      in
+      (s, TTuple (List.rev_map (Subst.apply s) ts))
   | Comp (body, qs) ->
       let s, env =
         List.fold_left (fun (s, env) q -> infer_qual s env q) ([], env) qs

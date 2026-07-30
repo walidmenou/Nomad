@@ -81,9 +81,6 @@ val keyword : string -> unit t
 val between : 'a t -> 'b t -> 'c t -> 'c t
 (** Parses the expression between the first two parsers *)
 
-val parenthesized : 'a t -> 'a t
-(** Parses expressions of the form: `( e )` *)
-
 val alpha : char t
 (** Parses a lowercase or uppercase character *)
 
@@ -176,6 +173,12 @@ val qualifier : qualifier t
     The three are tried in that order, since a guard would otherwise swallow the
     other two. `x <- xs` therefore reads as a generator while `x < xs` reads as
     a guard *)
+
+val paren_expr : expr t
+(** Parses a parenthesised expression. One part is just that expression, so the
+    parentheses group as usual, and two or more parts separated by commas make a
+    tuple. Tuples always need their parentheses, which is what keeps the comma
+    here from clashing with the one separating comprehension qualifiers *)
 
 val atom_expr : expr t
 (** Parses an atomic (i.e irreducile) expression, e.g: `x`, `(<expr>)`, `12` *)

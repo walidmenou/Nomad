@@ -98,7 +98,6 @@ let keyword s =
    | _ -> token (return ()) input
 
 let between p1 p2 p = p1 |>> p <<| p2
-let parenthesized p = between (token (char '(')) (token (char ')')) p
 let alpha = satisfies (function 'a' .. 'z' | 'A' .. 'Z' -> true | _ -> false)
 
 let alphanumeric =
@@ -270,8 +269,13 @@ and list_expr input =
     (comp_body <|> range_body <|> list_body)
     input
 
-and atom_expr input =
-  (lit_expr <|> var_expr <|> list_expr <|> parenthesized expr) input
+and paren_expr input =
+  ( between (token (char '(')) (token (char ')')) (sepby (token (char ',')) expr)
+  |*> fun es ->
+    match es with [] -> none | [ e ] -> return e | _ -> return (Tuple es) )
+    input
+
+and atom_expr input = (lit_expr <|> var_expr <|> list_expr <|> paren_expr) input
 
 and if_expr input =
   ( keyword "if" |>> expr |*> fun exp1 ->

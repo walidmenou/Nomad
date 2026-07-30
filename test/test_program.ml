@@ -142,6 +142,29 @@ let test_comprehension_types () =
   check_type_error "let a = [x + 1 | x <- [true]]" "Type mismatch: bool and int"
     ()
 
+let test_tuple () =
+  check_run "let a = (1, 2)" [ "(1, 2)" ] ();
+  check_run "let a = (1, true, \"s\")" [ "(1, true, \"s\")" ] ();
+  check_run "let a = (1, 2, 3, 4, 5)" [ "(1, 2, 3, 4, 5)" ] ();
+  check_run "let a = ((1, 2), 3)" [ "((1, 2), 3)" ] ();
+  check_run "let a = (1, [2; 3])" [ "(1, [2; 3])" ] ();
+  check_run "let a = [(1, 2); (3, 4)]" [ "[(1, 2); (3, 4)]" ] ();
+  check_run "let a = (1)" [ "1" ] ();
+  check_run "let a = ()" [ "()" ] ()
+
+let test_tuple_equality () =
+  check_run "let a = (1, 2) = (1, 2)" [ "true" ] ();
+  check_run "let a = (1, 2) = (1, 3)" [ "false" ] ();
+  check_run "let a = (1, \"s\") <> (1, \"t\")" [ "true" ] ()
+
+let test_tuple_types () =
+  check_run "let pair x = (x, x)\nlet a = pair 1\nlet b = pair \"s\""
+    [ "<fun>"; "(1, 1)"; "(\"s\", \"s\")" ]
+    ();
+  check_run "let a = [(x, y) | x <- [1; 2], y <- [3]]" [ "[(1, 3); (2, 3)]" ] ();
+  check_type_fails "let a = (1, 2) = (1, true)" ();
+  check_type_fails "let a = (1, 2) = (1, 2, 3)" ()
+
 let test_printing () =
   check_run "let s = \"hi\"" [ "\"hi\"" ] ();
   check_run "let u = ()" [ "()" ] ();
@@ -403,6 +426,9 @@ let tests =
     ("comprehension programs", `Quick, test_comprehension_programs);
     ("comprehension body", `Quick, test_comprehension_body);
     ("comprehension types", `Quick, test_comprehension_types);
+    ("tuple", `Quick, test_tuple);
+    ("tuple equality", `Quick, test_tuple_equality);
+    ("tuple types", `Quick, test_tuple_types);
     ("printing", `Quick, test_printing);
     ("arithmetic", `Quick, test_arithmetic);
     ("unary minus", `Quick, test_unary_minus);

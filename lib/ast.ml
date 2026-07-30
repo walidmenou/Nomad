@@ -8,6 +8,7 @@ type typ =
   | TUnit
   | TArrow of typ * typ
   | TList of typ
+  | TTuple of typ list
   | TVar of int
 
 type binary_op =
@@ -47,6 +48,7 @@ type expr =
   | Fun of ident * expr
   | App of expr * expr
   | List of expr list
+  | Tuple of expr list
   | Range of expr * expr
   | Comp of expr * qualifier list
   | Match of expr * (pattern * expr) list
@@ -67,6 +69,7 @@ let rec string_of_typ = function
   | TUnit -> "unit"
   | TArrow (t1, t2) -> "(" ^ string_of_typ t1 ^ " -> " ^ string_of_typ t2 ^ ")"
   | TList t -> string_of_typ t ^ " list"
+  | TTuple ts -> "(" ^ String.concat " * " (List.map string_of_typ ts) ^ ")"
   | TVar v -> "'a" ^ string_of_int v
 
 let string_of_binop = function
@@ -110,6 +113,7 @@ let rec string_of_expr = function
   | Rec (id, e1, e2) ->
       "let rec " ^ id ^ " = " ^ string_of_expr e1 ^ " in " ^ string_of_expr e2
   | List exprs -> "[" ^ String.concat "; " (List.map string_of_expr exprs) ^ "]"
+  | Tuple es -> "(" ^ String.concat ", " (List.map string_of_expr es) ^ ")"
   | Range (e1, e2) -> "[" ^ string_of_expr e1 ^ ".." ^ string_of_expr e2 ^ "]"
   | Comp (e, qs) ->
       "[" ^ string_of_expr e ^ " | "
@@ -127,6 +131,7 @@ and string_of_qual = function
 
 and atom e =
   match e with
-  | Int _ | Bool _ | String _ | Unit | Var _ | List _ | Range _ | Comp _ ->
+  | Int _ | Bool _ | String _ | Unit | Var _ | List _ | Tuple _ | Range _
+  | Comp _ ->
       string_of_expr e
   | _ -> "(" ^ string_of_expr e ^ ")"

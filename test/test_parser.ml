@@ -122,6 +122,16 @@ let test_comprehension () =
     ();
   check_parse expr "[a < b]" (List [ BinOp (Var "a", Less, Var "b") ]) ()
 
+let test_tuple () =
+  check_parse expr "(1, 2)" (Tuple [ Int 1; Int 2 ]) ();
+  check_parse expr "(1, 2, 3)" (Tuple [ Int 1; Int 2; Int 3 ]) ();
+  check_parse expr "((1, 2), 3)" (Tuple [ Tuple [ Int 1; Int 2 ]; Int 3 ]) ();
+  check_parse expr "(1)" (Int 1) ();
+  check_parse expr "(1 + 2) * 3"
+    (BinOp (BinOp (Int 1, Add, Int 2), Mul, Int 3))
+    ();
+  check_parse expr "()" Unit ()
+
 let test_app_expr () =
   check_parse expr "f x" (App (Var "f", Var "x")) ();
   check_parse expr "f x y" (App (App (Var "f", Var "x"), Var "y")) ()
@@ -175,6 +185,7 @@ let tests =
     ("functions", `Quick, test_fun_expr);
     ("multi argument", `Quick, test_multi_argument);
     ("range", `Quick, test_range);
+    ("tuple", `Quick, test_tuple);
     ("comprehension", `Quick, test_comprehension);
     ("applications", `Quick, test_app_expr);
     ("pipe", `Quick, test_pipe_expr);
