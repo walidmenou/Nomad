@@ -18,14 +18,20 @@ let repl () =
           match run program line with
           | Ok stmts -> (
               try
-                let type_env' = List.fold_left check_stmt type_env stmts in
-                let eval_env' =
+                let type_env', types =
                   List.fold_left
-                    (fun e stmt ->
+                    (fun (e, ts) stmt ->
+                      let e', t = check_stmt e stmt in
+                      (e', t :: ts))
+                    (type_env, []) stmts
+                in
+                let eval_env' =
+                  List.fold_left2
+                    (fun e t stmt ->
                       let e', v = eval_stmt e stmt in
-                      print_endline (show_val v);
+                      print_endline (show_val t v);
                       e')
-                    eval_env stmts
+                    eval_env (List.rev types) stmts
                 in
                 loop type_env' eval_env'
               with
@@ -51,10 +57,7 @@ let () =
     close_in ic;
     match run program s with
     | Ok stmts -> (
-        try
-          check_program stmts;
-          eval_program stmts
-        with
+        try eval_program (check_program stmts) stmts with
         | TypeError e -> print_endline ("Type Error: " ^ e)
         | EvaluationError e -> print_endline ("Evaluation Error: " ^ e))
     | Error e -> print_endline ("Parse Error: " ^ e)

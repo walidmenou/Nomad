@@ -35,12 +35,16 @@ val eval_stmt : env -> statement -> env * value
 (** Evaluates a statement and returns the environment the next one runs in,
     along with the value it produced *)
 
-val show_val : value -> string
-(** Prints a value the way the source would write it. A function prints as
-    [<fun>], since there is nothing useful to show *)
+val show_val : typ -> value -> string
+(** Prints a value the way the source would write it. A function has no useful
+    form of its own, so it prints as [<fun>] followed by its type, which is the
+    informative part. The type comes from the checker, since the evaluator does
+    not compute one *)
 
-val run_program : program -> string list
-(** The lines a program prints, in order, without printing them *)
+val run_program : program -> value list
+(** The value each statement of a program produces, in order, without printing
+    anything *)
 
-val eval_program : program -> unit
-(** Runs every statement of a program in order and prints each value *)
+val eval_program : typ list -> program -> unit
+(** Runs every statement of a program in order and prints each value against the
+    type the checker gave it *)

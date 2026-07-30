@@ -4,8 +4,8 @@ let run src =
   match Parser.run Parser.program src with
   | Error e -> Alcotest.fail ("Parse error: " ^ e)
   | Ok stmts ->
-      Check.check_program stmts;
-      Eval.run_program stmts
+      let types = Check.check_program stmts in
+      List.map2 Eval.show_val types (Eval.run_program stmts)
 
 let check_run src expected () =
   Alcotest.(check (list string)) "output" expected (run src)
@@ -40,7 +40,9 @@ let test_bindings () =
   check_run "let x = 1\nlet x = 2\nlet y = x" [ "1"; "2"; "2" ] ()
 
 let test_layout () =
-  check_run "let id = fun x -> x\nid 1\nid true" [ "<fun>"; "1"; "true" ] ();
+  check_run "let id = fun x -> x\nid 1\nid true"
+    [ "<fun> : 'a -> 'a"; "1"; "true" ]
+    ();
   check_run "1 + 1\n2 + 2" [ "2"; "4" ] ();
   check_run "let a =\n  1 +\n  2" [ "3" ] ();
   check_run "let a =\n  let x = 1 in\n  x + 1" [ "2" ] ();
@@ -124,7 +126,7 @@ let test_comprehension_programs () =
     "let rec any p l = match l with [] -> false | x :: r -> p x || any p r\n\
      let a = [n | n <- [2..12], any (fun d -> n / d * d = n) [2..n - 1] = \
      false]"
-    [ "<fun>"; "[2; 3; 5; 7; 11]" ]
+    [ "<fun> : ('a -> bool) -> 'a list -> bool"; "[2; 3; 5; 7; 11]" ]
     ()
 
 let test_comprehension_body () =
@@ -159,7 +161,7 @@ let test_tuple_equality () =
 
 let test_tuple_types () =
   check_run "let pair x = (x, x)\nlet a = pair 1\nlet b = pair \"s\""
-    [ "<fun>"; "(1, 1)"; "(\"s\", \"s\")" ]
+    [ "<fun> : 'a -> ('a * 'a)"; "(1, 1)"; "(\"s\", \"s\")" ]
     ();
   check_run "let a = [(x, y) | x <- [1; 2], y <- [3]]" [ "[(1, 3); (2, 3)]" ] ();
   check_type_fails "let a = (1, 2) = (1, true)" ();
@@ -167,9 +169,11 @@ let test_tuple_types () =
 
 let test_tuple_patterns () =
   check_run "let fst p = match p with (a, b) -> a\nlet a = fst (1, 2)"
-    [ "<fun>"; "1" ] ();
+    [ "<fun> : ('a * 'b) -> 'a"; "1" ]
+    ();
   check_run "let snd p = match p with (a, b) -> b\nlet a = snd (1, \"s\")"
-    [ "<fun>"; "\"s\"" ] ();
+    [ "<fun> : ('a * 'b) -> 'b"; "\"s\"" ]
+    ();
   check_run "let a = match (1, 2, 3) with (x, y, z) -> x + y + z" [ "6" ] ();
   check_run "let a = match ((1, 2), 3) with ((x, y), z) -> x + y + z" [ "6" ] ();
   check_run "let a = match (1, 2) with (1, y) -> y | _ -> 0" [ "2" ] ();
@@ -222,7 +226,9 @@ let test_minus_spacing () =
   check_run "let a = 1 -2" [ "-1" ] ();
   check_run "let a = 1 --2" [ "1" ] ();
   check_run "let x = 5\nlet a = x -1" [ "5"; "4" ] ();
-  check_run "let f = fun y -> y + 1\nlet a = f (-1)" [ "<fun>"; "0" ] ()
+  check_run "let f = fun y -> y + 1\nlet a = f (-1)"
+    [ "<fun> : int -> int"; "0" ]
+    ()
 
 let test_comparison () =
   check_run "let a = 1 < 2" [ "true" ] ();
@@ -269,7 +275,8 @@ let test_precedence () =
   check_run
     "let rec len = fun l -> match l with [] -> 0 | x :: xs -> 1 + len xs\n\
      let a = [1; 2; 3] |> len > 0"
-    [ "<fun>"; "true" ] ()
+    [ "<fun> : 'a list -> int"; "true" ]
+    ()
 
 let test_polymorphism () =
   check_run "let a = let id = fun x -> x in if id true then id 1 else 0" [ "1" ]
@@ -281,7 +288,7 @@ let test_polymorphism () =
     [ "3" ] ();
   check_run
     "let id = fun x -> x\nlet a = id 1\nlet b = id true\nlet c = id \"s\""
-    [ "<fun>"; "1"; "true"; "\"s\"" ]
+    [ "<fun> : 'a -> 'a"; "1"; "true"; "\"s\"" ]
     ();
   check_run "let e = []\nlet a = 1 :: e\nlet b = true :: e"
     [ "[]"; "[1]"; "[true]" ] ()
@@ -344,21 +351,31 @@ let test_let () =
   check_run "let x = 1\nlet a = let x = 2 in x" [ "1"; "2" ] ()
 
 let test_application () =
-  check_run "let f = fun x -> x + 1\nlet a = f 2" [ "<fun>"; "3" ] ();
-  check_run "let f = fun x -> x\nlet a = f [1; 2]" [ "<fun>"; "[1; 2]" ] ();
+  check_run "let f = fun x -> x + 1\nlet a = f 2"
+    [ "<fun> : int -> int"; "3" ]
+    ();
+  check_run "let f = fun x -> x\nlet a = f [1; 2]"
+    [ "<fun> : 'a -> 'a"; "[1; 2]" ]
+    ();
   check_run "let a = (fun x -> x * x) 4" [ "16" ] ()
 
 let test_multi_argument () =
-  check_run "let add a b = a + b\nlet r = add 1 2" [ "<fun>"; "3" ] ();
-  check_run "let f a b c = a + b + c\nlet r = f 1 2 3" [ "<fun>"; "6" ] ();
+  check_run "let add a b = a + b\nlet r = add 1 2"
+    [ "<fun> : int -> int -> int"; "3" ]
+    ();
+  check_run "let f a b c = a + b + c\nlet r = f 1 2 3"
+    [ "<fun> : int -> int -> int -> int"; "6" ]
+    ();
   check_run "let add a b = a + b\nlet inc = add 1\nlet r = inc 5"
-    [ "<fun>"; "<fun>"; "6" ] ();
+    [ "<fun> : int -> int -> int"; "<fun> : int -> int"; "6" ]
+    ();
   check_run "let a = let f x y = x * y in f 3 4" [ "12" ] ();
   check_run "let a = (fun x y -> x + y) 1 2" [ "3" ] ();
   check_run
     "let rec gcd a b = if b = 0 then a else gcd b (a - (a / b) * b)\n\
      let r = gcd 48 18"
-    [ "<fun>"; "6" ] ();
+    [ "<fun> : int -> int -> int"; "6" ]
+    ();
   check_run
     "let a = let rec go n acc = if n = 0 then acc else go (n - 1) (acc + n) in \
      go 4 0"
@@ -366,36 +383,43 @@ let test_multi_argument () =
 
 let test_closures () =
   check_run "let x = 1\nlet f = fun y -> x + y\nlet x = 100\nlet r = f 5"
-    [ "1"; "<fun>"; "100"; "6" ]
+    [ "1"; "<fun> : int -> int"; "100"; "6" ]
     ();
   check_run "let add = fun x -> fun y -> x + y\nlet a = add 1 2"
-    [ "<fun>"; "3" ] ();
+    [ "<fun> : int -> int -> int"; "3" ]
+    ();
   check_run
     "let make = fun n -> fun x -> x + n\nlet inc = make 1\nlet a = inc 5"
-    [ "<fun>"; "<fun>"; "6" ] ();
+    [ "<fun> : int -> int -> int"; "<fun> : int -> int"; "6" ]
+    ();
   check_run
     "let x = 1\n\
      let twice = fun f -> fun v -> f (f v)\n\
      let g = fun y -> x + y\n\
      let a = twice g 0"
-    [ "1"; "<fun>"; "<fun>"; "2" ]
+    [ "1"; "<fun> : ('a -> 'a) -> 'a -> 'a"; "<fun> : int -> int"; "2" ]
     ()
 
 let test_pipe () =
-  check_run "let f = fun x -> x + 1\nlet a = 5 |> f" [ "<fun>"; "6" ] ();
+  check_run "let f = fun x -> x + 1\nlet a = 5 |> f"
+    [ "<fun> : int -> int"; "6" ]
+    ();
   check_run
     "let f = fun x -> x + 1\nlet g = fun x -> x * 2\nlet a = 5 |> f |> g"
-    [ "<fun>"; "<fun>"; "12" ] ()
+    [ "<fun> : int -> int"; "<fun> : int -> int"; "12" ]
+    ()
 
 let test_recursion () =
   check_run
     "let rec fact = fun n -> if n = 0 then 1 else n * fact (n - 1)\n\
      let a = fact 5"
-    [ "<fun>"; "120" ] ();
+    [ "<fun> : int -> int"; "120" ]
+    ();
   check_run
     "let rec len = fun l -> match l with [] -> 0 | x :: xs -> 1 + len xs\n\
      let a = len [1; 2; 3]"
-    [ "<fun>"; "3" ] ()
+    [ "<fun> : 'a list -> int"; "3" ]
+    ()
 
 let test_cons () =
   check_run "let a = 1 :: [2; 3]" [ "[1; 2; 3]" ] ();
@@ -420,11 +444,14 @@ let test_type_errors () =
   check_type_error "let a = x" "Unbound variable x" ()
 
 let test_examples () =
-  check_run (read_file "../examples/gcd.nd") [ "<fun>"; "6" ] ();
+  check_run
+    (read_file "../examples/gcd.nd")
+    [ "<fun> : int -> int -> int"; "6" ]
+    ();
   check_run
     (read_file "../examples/triples.nd")
     [
-      "<fun>";
+      "<fun> : int -> int list list";
       "[[3; 4; 5]; [6; 8; 10]; [5; 12; 13]; [9; 12; 15]; [8; 15; 17]; [12; 16; \
        20]]";
     ]
@@ -432,12 +459,20 @@ let test_examples () =
   check_run
     (read_file "../examples/primes.nd")
     [
-      "<fun>"; "<fun>"; "<fun>"; "<fun>"; "[2; 3; 5; 7; 11; 13; 17; 19; 23; 29]";
+      "<fun> : bool -> bool";
+      "<fun> : ('a -> bool) -> 'a list -> bool";
+      "<fun> : int -> int -> bool";
+      "<fun> : int -> int list";
+      "[2; 3; 5; 7; 11; 13; 17; 19; 23; 29]";
     ]
     ();
   check_run
     (read_file "../examples/sort.nd")
-    [ "<fun>"; "<fun>"; "[1; 2; 5; 5; 6; 9]" ]
+    [
+      "<fun> : 'a list -> 'a list -> 'a list";
+      "<fun> : int list -> int list";
+      "[1; 2; 5; 5; 6; 9]";
+    ]
     ()
 
 let tests =

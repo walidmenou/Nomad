@@ -3,8 +3,10 @@ open Nomad.Subst
 open Nomad.Check
 open Nomad.Infer
 
+let bind env stmt = fst (check_stmt env stmt)
+
 let check_stmts stmts expected () =
-  match List.fold_left check_stmt [] stmts with
+  match List.fold_left bind [] stmts with
   | env ->
       let binding (id, Forall (_, t)) = id ^ " : " ^ string_of_typ t in
       Alcotest.(check (list string))
@@ -12,7 +14,7 @@ let check_stmts stmts expected () =
   | exception TypeError e -> Alcotest.fail ("TypeError: " ^ e)
 
 let check_error stmts expected () =
-  match List.fold_left check_stmt [] stmts with
+  match List.fold_left bind [] stmts with
   | _ -> Alcotest.fail "expected type error"
   | exception TypeError e -> Alcotest.(check string) "error message" expected e
 
@@ -43,13 +45,18 @@ let test_expr () =
     [ "x : int" ] ()
 
 let test_program () =
-  check_program
-    [
-      LetStmt ("x", Int 1);
-      RecStmt ("f", fact);
-      ExprStmt (App (Var "f", Var "x"));
-    ];
-  Alcotest.(check bool) "program checks" true true
+  let types =
+    check_program
+      [
+        LetStmt ("x", Int 1);
+        RecStmt ("f", fact);
+        ExprStmt (App (Var "f", Var "x"));
+      ]
+  in
+  Alcotest.(check (list string))
+    "statement types"
+    [ "int"; "(int -> int)"; "int" ]
+    (List.map string_of_typ types)
 
 let test_errors () =
   check_error [ ExprStmt (Var "x") ] "Unbound variable x" ();

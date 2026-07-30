@@ -136,20 +136,26 @@ let eval_stmt env stmt =
       let v = rec_value env id e in
       ((id, v) :: env, v)
 
-let rec show_val = function
+let rec show = function
   | VInt n -> string_of_int n
   | VBool b -> string_of_bool b
   | VString s -> "\"" ^ s ^ "\""
   | VUnit -> "()"
-  | VList vs -> "[" ^ String.concat "; " (List.map show_val vs) ^ "]"
-  | VTuple vs -> "(" ^ String.concat ", " (List.map show_val vs) ^ ")"
+  | VList vs -> "[" ^ String.concat "; " (List.map show vs) ^ "]"
+  | VTuple vs -> "(" ^ String.concat ", " (List.map show vs) ^ ")"
   | VClos _ | VRecClos _ -> "<fun>"
 
+let show_val ty v =
+  match v with
+  | VClos _ | VRecClos _ -> "<fun> : " ^ display_typ ty
+  | _ -> show v
+
 let run_program stmts =
-  let step (env, printed) stmt =
+  let step (env, vs) stmt =
     let env, v = eval_stmt env stmt in
-    (env, show_val v :: printed)
+    (env, v :: vs)
   in
   List.rev (snd (List.fold_left step ([], []) stmts))
 
-let eval_program stmts = List.iter print_endline (run_program stmts)
+let eval_program types stmts =
+  List.iter2 (fun t v -> print_endline (show_val t v)) types (run_program stmts)

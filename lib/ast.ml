@@ -63,15 +63,40 @@ type statement =
 
 type program = statement list
 
-let rec string_of_typ = function
+let rec typ_with name = function
   | TInt -> "int"
   | TBool -> "bool"
   | TString -> "string"
   | TUnit -> "unit"
-  | TArrow (t1, t2) -> "(" ^ string_of_typ t1 ^ " -> " ^ string_of_typ t2 ^ ")"
-  | TList t -> string_of_typ t ^ " list"
-  | TTuple ts -> "(" ^ String.concat " * " (List.map string_of_typ ts) ^ ")"
-  | TVar v -> "'a" ^ string_of_int v
+  | TArrow (t1, t2) -> "(" ^ typ_with name t1 ^ " -> " ^ typ_with name t2 ^ ")"
+  | TList t -> typ_with name t ^ " list"
+  | TTuple ts -> "(" ^ String.concat " * " (List.map (typ_with name) ts) ^ ")"
+  | TVar v -> name v
+
+let string_of_typ t = typ_with (fun v -> "'a" ^ string_of_int v) t
+
+let display_typ t =
+  let rec order acc = function
+    | TVar v -> if List.mem v acc then acc else acc @ [ v ]
+    | TArrow (t1, t2) -> order (order acc t1) t2
+    | TList t -> order acc t
+    | TTuple ts -> List.fold_left order acc ts
+    | _ -> acc
+  in
+  let names = List.mapi (fun i v -> (v, i)) (order [] t) in
+  let name v =
+    let i = List.assoc v names in
+    let letter = Char.chr (Char.code 'a' + (i mod 26)) in
+    if i < 26 then Printf.sprintf "'%c" letter
+    else Printf.sprintf "'%c%d" letter (i / 26)
+  in
+  let rec show = function
+    | TArrow (t1, t2) -> arg t1 ^ " -> " ^ show t2
+    | TList t -> arg t ^ " list"
+    | TTuple ts -> "(" ^ String.concat " * " (List.map show ts) ^ ")"
+    | t -> typ_with name t
+  and arg = function TArrow _ as t -> "(" ^ show t ^ ")" | t -> show t in
+  show t
 
 let string_of_binop = function
   | Add -> "+"
