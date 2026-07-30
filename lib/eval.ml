@@ -116,6 +116,7 @@ and binop op v1 v2 =
   | Greater, VInt a, VInt b -> VBool (a > b)
   | Geq, VInt a, VInt b -> VBool (a >= b)
   | Cons, v, VList vs -> VList (v :: vs)
+  | Append, VList a, VList b -> VList (a @ b)
   | Equal, _, _ -> VBool (equal v1 v2)
   | Diff, _, _ -> VBool (not (equal v1 v2))
   | _ -> raise (EvaluationError "Type mismatch in binary operation")

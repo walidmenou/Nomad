@@ -149,6 +149,14 @@ val cmpop : binary_op t
 val consop : binary_op t
 (** Parses a cons operator *)
 
+val appendop : binary_op t
+(** Parses an append operator *)
+
+val append_expr : expr t
+(** Parses a chain of appends, e.g: `xs @ ys @ zs`. Groups to the right, and
+    sits between the pipe and cons, so `x :: xs @ ys` appends to the whole list
+    and a pipeline takes the appended list as one operand *)
+
 val chain_left : binary_op t -> expr t -> expr t
 (** Parses a chain of expressions separated by the given operator type *)
 

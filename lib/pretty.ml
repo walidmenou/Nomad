@@ -50,6 +50,7 @@ let string_of_binop = function
   | Greater -> ">"
   | Geq -> ">="
   | Cons -> "::"
+  | Append -> "@"
 
 let rec string_of_pat = function
   | PatWildcard -> "_"

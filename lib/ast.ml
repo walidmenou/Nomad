@@ -26,6 +26,7 @@ type binary_op =
   | Geq
   | Greater
   | Cons
+  | Append
 
 type pattern =
   | PatWildcard

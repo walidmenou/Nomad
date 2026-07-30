@@ -159,6 +159,7 @@ let cmpop =
   <|> (keyword "=" |*> fun _ -> return Equal)
 
 let consop = keyword "::" |*> fun _ -> return Cons
+let appendop = keyword "@" |*> fun _ -> return Append
 let arrow = keyword "->"
 
 let chain_left op_p exp_p =
@@ -230,6 +231,7 @@ let rec expr input =
 and or_expr input = chain_left orop and_expr input
 and and_expr input = chain_left andop cmp_expr input
 and cmp_expr input = chain_cmps cmpop pipe_expr input
+and append_expr input = chain_right appendop cons_expr input
 and cons_expr input = chain_right consop add_expr input
 and add_expr input = chain_left addop mul_expr input
 and mul_expr input = chain_left mulop neg_expr input
@@ -241,8 +243,8 @@ and neg_expr input =
     input
 
 and pipe_expr input =
-  ( cons_expr |*> fun first ->
-    many (pipe |>> cons_expr) |*> fun rest ->
+  ( append_expr |*> fun first ->
+    many (pipe |>> append_expr) |*> fun rest ->
     return (List.fold_left (fun acc f -> App (f, acc)) first rest) )
     input
 

@@ -212,6 +212,25 @@ let test_arithmetic () =
   check_run "let a = 0 - 7 / 2" [ "-3" ] ();
   check_run "let a = 1 - 2 - 3" [ "-4" ] ()
 
+let test_append () =
+  check_run "let a = [1; 2] @ [3; 4]" [ "[1; 2; 3; 4]" ] ();
+  check_run "let a = [] @ [1]" [ "[1]" ] ();
+  check_run "let a = [1] @ []" [ "[1]" ] ();
+  check_run "let a = [] @ []" [ "[]" ] ();
+  check_run "let a = [\"p\"] @ [\"q\"]" [ "[\"p\"; \"q\"]" ] ();
+  check_run "let a = [[1]] @ [[2]]" [ "[[1]; [2]]" ] ();
+  check_run "let a = [1] @ [2] @ [3]" [ "[1; 2; 3]" ] ();
+  check_type_fails "let a = [1] @ [true]" ();
+  check_type_fails "let a = 1 @ [2]" ()
+
+let test_append_precedence () =
+  check_run "let a = 0 :: [1] @ [2]" [ "[0; 1; 2]" ] ();
+  check_run "let a = [1] @ [2] = [1; 2]" [ "true" ] ();
+  check_run "let f l = l @ [9]\nlet a = [1] |> f"
+    [ "<fun> : int list -> int list"; "[1; 9]" ]
+    ();
+  check_run "let a = [1 + 1] @ [2 * 2]" [ "[2; 4]" ] ()
+
 let test_modulo () =
   check_run "let a = 7 % 3" [ "1" ] ();
   check_run "let a = 2 + 7 % 3" [ "3" ] ();
@@ -523,6 +542,8 @@ let tests =
     ("parenthesised patterns", `Quick, test_parenthesised_patterns);
     ("printing", `Quick, test_printing);
     ("arithmetic", `Quick, test_arithmetic);
+    ("append", `Quick, test_append);
+    ("append precedence", `Quick, test_append_precedence);
     ("modulo", `Quick, test_modulo);
     ("unary minus", `Quick, test_unary_minus);
     ("minus spacing", `Quick, test_minus_spacing);

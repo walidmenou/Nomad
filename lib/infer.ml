@@ -54,6 +54,11 @@ let infer_binop op t1 t2 =
   | Cons ->
       let s = Subst.unify (TList t1) t2 in
       (s, Subst.apply s t2)
+  | Append ->
+      let s1 = Subst.unify t1 t2 in
+      let s2 = Subst.unify (Subst.apply s1 t1) (TList (fresh ())) in
+      let s = Subst.compose s2 s1 in
+      (s, Subst.apply s t1)
 
 let join b1 b2 =
   match List.find_opt (fun (id, _) -> List.mem_assoc id b2) b1 with
