@@ -452,6 +452,23 @@ let test_type_errors () =
   check_type_error "let a = 1 + true" "Type mismatch: bool and int" ();
   check_type_error "let a = x" "Unbound variable x" ()
 
+let test_algorithm_examples () =
+  let last src = List.nth (run src) (List.length (run src) - 1) in
+  Alcotest.(check string)
+    "merge sort" "[1; 2; 3; 5; 5; 6; 9]"
+    (last (read_file "../examples/msort.nd"));
+  Alcotest.(check string)
+    "six queens"
+    "[[5; 3; 1; 6; 4; 2]; [4; 1; 5; 2; 6; 3]; [3; 6; 2; 5; 1; 4]; [2; 4; 6; 1; \
+     3; 5]]"
+    (last (read_file "../examples/queens.nd"));
+  Alcotest.(check string)
+    "knapsack" "7"
+    (last (read_file "../examples/knapsack.nd"));
+  Alcotest.(check string)
+    "bellman ford" "[0; 2; 7; 4; -2]"
+    (last (read_file "../examples/bellman_ford.nd"))
+
 let test_examples () =
   check_run
     (read_file "../examples/gcd.nd")
@@ -532,4 +549,5 @@ let tests =
     ("runtime errors", `Quick, test_runtime_errors);
     ("type errors", `Quick, test_type_errors);
     ("examples", `Quick, test_examples);
+    ("algorithm examples", `Quick, test_algorithm_examples);
   ]

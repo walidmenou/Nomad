@@ -1,0 +1,13 @@
+-- The n queens problem. Each solution is a list of column positions, one per
+-- row. The comprehension extends every partial solution by every safe column.
+
+let rec safe q qs d =
+  match qs with
+  [] -> true
+  | p :: rest -> q <> p && q <> p + d && q <> p - d && safe q rest (d + 1)
+
+let rec queens n k =
+  if k = 0 then [[]]
+  else [q :: qs | qs <- queens n (k - 1), q <- [1..n], safe q qs 1]
+
+let result = queens 6 6

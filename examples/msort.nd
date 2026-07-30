@@ -1,0 +1,24 @@
+-- Merge sort. Splitting alternates elements between two lists, which needs
+-- no length and no indexing.
+
+let rec merge xs ys =
+  match xs with
+  [] -> ys
+  | x :: xr ->
+      (match ys with
+      [] -> xs
+      | y :: yr -> if x <= y then x :: merge xr ys else y :: merge xs yr)
+
+let rec split l =
+  match l with
+  [] -> ([], [])
+  | x :: [] -> ([x], [])
+  | x :: y :: r -> (match split r with (a, b) -> (x :: a, y :: b))
+
+let rec msort l =
+  match l with
+  [] -> []
+  | x :: [] -> [x]
+  | _ -> (match split l with (a, b) -> merge (msort a) (msort b))
+
+let result = msort [5; 2; 9; 1; 5; 6; 3]
