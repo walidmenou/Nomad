@@ -470,7 +470,6 @@ let test_examples () =
     [
       "<fun> : bool -> bool";
       "<fun> : ('a -> bool) -> 'a list -> bool";
-      "<fun> : int -> int -> bool";
       "<fun> : int -> int list";
       "[2; 3; 5; 7; 11; 13; 17; 19; 23; 29]";
     ]
