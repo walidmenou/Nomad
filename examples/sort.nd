@@ -1,11 +1,10 @@
--- Quicksort. The two comprehensions are the partition step, and @ joins the
--- sorted halves back together.
+-- Quicksort. The two comprehensions are the partition step, and the chain of
+-- appends puts the pivot back between the sorted halves.
 
 let rec quicksort lst =
   match lst with
   [] -> []
   | x :: xs ->
-      quicksort [y | y <- xs, y <= x]
-      @ (x :: quicksort [y | y <- xs, y > x])
+      quicksort [y | y <- xs, y <= x] @ [x] @ quicksort [y | y <- xs, y > x]
 
 let result = quicksort [5; 2; 9; 1; 5; 6]

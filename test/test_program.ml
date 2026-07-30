@@ -220,6 +220,8 @@ let test_append () =
   check_run "let a = [\"p\"] @ [\"q\"]" [ "[\"p\"; \"q\"]" ] ();
   check_run "let a = [[1]] @ [[2]]" [ "[[1]; [2]]" ] ();
   check_run "let a = [1] @ [2] @ [3]" [ "[1; 2; 3]" ] ();
+  check_run "let a = [1] @ [2] @ [3] @ [4]" [ "[1; 2; 3; 4]" ] ();
+  check_run "let x = 5\nlet a = [1] @ [x] @ [9]" [ "5"; "[1; 5; 9]" ] ();
   check_type_fails "let a = [1] @ [true]" ();
   check_type_fails "let a = 1 @ [2]" ()
 

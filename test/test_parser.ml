@@ -66,6 +66,12 @@ let test_append () =
   check_parse expr "a @ b @ c"
     (BinOp (Var "a", Append, BinOp (Var "b", Append, Var "c")))
     ();
+  check_parse expr "a @ b @ c @ d"
+    (BinOp
+       ( Var "a",
+         Append,
+         BinOp (Var "b", Append, BinOp (Var "c", Append, Var "d")) ))
+    ();
   check_parse expr "x :: xs @ ys"
     (BinOp (BinOp (Var "x", Cons, Var "xs"), Append, Var "ys"))
     ();
