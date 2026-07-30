@@ -512,11 +512,7 @@ let test_examples () =
     ();
   check_run
     (read_file "../examples/sort.nd")
-    [
-      "<fun> : 'a list -> 'a list -> 'a list";
-      "<fun> : int list -> int list";
-      "[1; 2; 5; 5; 6; 9]";
-    ]
+    [ "<fun> : int list -> int list"; "[1; 2; 5; 5; 6; 9]" ]
     ()
 
 let tests =

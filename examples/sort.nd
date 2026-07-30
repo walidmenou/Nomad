@@ -1,14 +1,11 @@
-let rec concat l1 l2 =
-  match l1 with
-  [] -> l2
-  | x :: xs -> x :: concat xs l2
+-- Quicksort. The two comprehensions are the partition step, and @ joins the
+-- sorted halves back together.
 
 let rec quicksort lst =
   match lst with
   [] -> []
   | x :: xs ->
-      concat
-        (quicksort [y | y <- xs, y <= x])
-        (x :: quicksort [y | y <- xs, y > x])
+      quicksort [y | y <- xs, y <= x]
+      @ (x :: quicksort [y | y <- xs, y > x])
 
 let result = quicksort [5; 2; 9; 1; 5; 6]
