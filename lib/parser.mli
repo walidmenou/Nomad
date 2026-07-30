@@ -81,6 +81,35 @@ val keyword : string -> unit t
 val between : 'a t -> 'b t -> 'c t -> 'c t
 (** Parses the expression between the first two parsers *)
 
+val symbol : char -> char t
+(** Parses a single punctuation character and the whitespace after it. What
+    [keyword] is to a word, this is to a mark *)
+
+val lparen : char t
+(** Parses `(` *)
+
+val rparen : char t
+(** Parses `)` *)
+
+val lbracket : char t
+(** Parses `[` *)
+
+val rbracket : char t
+(** Parses `]` *)
+
+val comma : char t
+(** Parses `,`, which separates the parts of a tuple and the qualifiers of a
+    comprehension *)
+
+val semicolon : char t
+(** Parses `;`, which separates the elements of a list literal *)
+
+val parens : 'a t -> 'a t
+(** Parses the given parser between parentheses *)
+
+val brackets : 'a t -> 'a t
+(** Parses the given parser between square brackets *)
+
 val alpha : char t
 (** Parses a lowercase or uppercase character *)
 

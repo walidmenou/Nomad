@@ -98,6 +98,15 @@ let keyword s =
    | _ -> token (return ()) input
 
 let between p1 p2 p = p1 |>> p <<| p2
+let symbol c = token (char c)
+let lparen = symbol '('
+let rparen = symbol ')'
+let lbracket = symbol '['
+let rbracket = symbol ']'
+let comma = symbol ','
+let semicolon = symbol ';'
+let parens p = between lparen rparen p
+let brackets p = between lbracket rbracket p
 let alpha = satisfies (function 'a' .. 'z' | 'A' .. 'Z' -> true | _ -> false)
 
 let alphanumeric =
@@ -202,11 +211,7 @@ and chain_right_pat op_p exp_p input =
     input
 
 and paren_pat input =
-  ( between
-      (token (char '('))
-      (token (char ')'))
-      (sepby (token (char ',')) pattern)
-  |*> fun ps ->
+  ( parens (sepby comma pattern) |*> fun ps ->
     match ps with [] -> none | [ p ] -> return p | _ -> return (PatTuple ps) )
     input
 
@@ -261,7 +266,7 @@ and qualifier input = (qual_let <|> generator <|> guard) input
 
 and comp_body input =
   ( expr |*> fun body ->
-    keyword "|" |>> sepby (token (char ',')) qualifier |*> fun qs ->
+    keyword "|" |>> sepby comma qualifier |*> fun qs ->
     if qs = [] then none else return (Comp (body, qs)) )
     input
 
@@ -271,18 +276,12 @@ and range_body input =
     input
 
 and list_body input =
-  (sepby (token (char ';')) expr |*> fun exprs -> return (List exprs)) input
+  (sepby semicolon expr |*> fun exprs -> return (List exprs)) input
 
-and list_expr input =
-  between
-    (token (char '['))
-    (token (char ']'))
-    (comp_body <|> range_body <|> list_body)
-    input
+and list_expr input = brackets (comp_body <|> range_body <|> list_body) input
 
 and paren_expr input =
-  ( between (token (char '(')) (token (char ')')) (sepby (token (char ',')) expr)
-  |*> fun es ->
+  ( parens (sepby comma expr) |*> fun es ->
     match es with [] -> none | [ e ] -> return e | _ -> return (Tuple es) )
     input
 
