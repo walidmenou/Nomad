@@ -1,6 +1,3 @@
--- Quicksort. The two comprehensions are the partition step, and the chain of
--- appends puts the pivot back between the sorted halves.
-
 let rec quicksort lst =
   match lst with
   [] -> []
