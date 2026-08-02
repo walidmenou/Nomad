@@ -627,7 +627,10 @@ let test_algorithm_examples () =
     (last (read_file "../examples/knapsack.nd"));
   Alcotest.(check string)
     "bellman ford" "[0; 2; 7; 4; -2]"
-    (last (read_file "../examples/bellman_ford.nd"))
+    (last (read_file "../examples/bellman_ford.nd"));
+  Alcotest.(check string)
+    "trie" "[true; false; true; false; true]"
+    (last (read_file "../examples/trie.nd"))
 
 let test_examples () =
   check_run
