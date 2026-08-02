@@ -1,6 +1,3 @@
--- Every Pythagorean triple with all three sides at most n.
--- Three generators and a guard, in one comprehension.
-
 let triples n =
   [[a; b; c] | c <- [1..n], b <- [1..c], a <- [1..b], a * a + b * b = c * c]
 

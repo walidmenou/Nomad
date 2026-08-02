@@ -1,7 +1,3 @@
--- A trie over words written as lists of small integers. A node records
--- whether a word ends there and the children reachable by one more symbol.
--- The type is recursive, which is what a declaration buys.
-
 type 'a option = None | Some 'a
 type trie = Node bool ((int * trie) list)
 

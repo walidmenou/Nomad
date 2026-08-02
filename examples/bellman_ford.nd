@@ -1,7 +1,3 @@
--- Bellman-Ford shortest paths on the graph from CLRS figure 24.4. An edge is
--- a triple of source, target and weight. Each round rebuilds every distance
--- rather than relaxing edges in place.
-
 let inf = 1000000
 let min a b = if a < b then a else b
 

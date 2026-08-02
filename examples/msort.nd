@@ -1,6 +1,3 @@
--- Merge sort. Splitting alternates elements between two lists, which needs
--- no length and no indexing.
-
 let rec merge xs ys =
   match xs with
   [] -> ys
