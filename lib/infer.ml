@@ -66,6 +66,8 @@ let join b1 b2 =
       raise (Subst.TypeError (id ^ " is bound twice in the same pattern"))
   | None -> b1 @ b2
 
+let bind_with s = List.map (fun (id, t) -> (id, Subst.apply s t))
+
 let rec infer_pat pat =
   match pat with
   | PatWildcard -> ([], fresh ())
@@ -80,7 +82,7 @@ let rec infer_pat pat =
       let b1, t1 = infer_pat p1 in
       let b2, t2 = infer_pat p2 in
       let s = Subst.unify t2 (TList t1) in
-      (join b1 b2, Subst.apply s t2)
+      (bind_with s (join b1 b2), Subst.apply s t2)
   | PatTuple ps ->
       let bs, ts = List.split (List.map infer_pat ps) in
       (List.fold_left join [] bs, TTuple ts)

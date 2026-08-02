@@ -198,6 +198,18 @@ let test_parenthesised_patterns () =
   check_run "let a = match [[1; 2]] with (x :: xs) :: r -> x | _ -> 0" [ "1" ]
     ()
 
+let test_pattern_binding_types () =
+  check_run "let tl l = match l with [] -> [] | x :: xs -> xs"
+    [ "<fun> : 'a list -> 'a list" ]
+    ();
+  check_run "let hd d l = match l with [] -> d | x :: xs -> x"
+    [ "<fun> : 'a -> 'a list -> 'a" ]
+    ();
+  check_type_fails
+    "let tl l = match l with [] -> [] | x :: xs -> xs\n\
+     let a = tl [1; 2] @ [\"x\"]"
+    ()
+
 let test_declarations () =
   check_run "type shape = Circle int | Rect int int\nlet a = Circle 5"
     [ "Circle 5" ] ();
@@ -594,6 +606,7 @@ let tests =
     ("tuple patterns", `Quick, test_tuple_patterns);
     ("tuple exhaustiveness", `Quick, test_tuple_exhaustiveness);
     ("parenthesised patterns", `Quick, test_parenthesised_patterns);
+    ("pattern binding types", `Quick, test_pattern_binding_types);
     ("declarations", `Quick, test_declarations);
     ("declaration types", `Quick, test_declaration_types);
     ("recursive declarations", `Quick, test_recursive_declarations);
