@@ -173,6 +173,9 @@ let test_pipe_expr () =
 let test_match_expr () =
   check_parse expr "match x with _ -> 1 | y -> 2"
     (Match (Var "x", [ (PatWildcard, Int 1); (PatVar "y", Int 2) ]))
+    ();
+  check_parse expr "match x with | _ -> 1 | y -> 2"
+    (Match (Var "x", [ (PatWildcard, Int 1); (PatVar "y", Int 2) ]))
     ()
 
 let test_pattern () =

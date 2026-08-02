@@ -286,7 +286,9 @@ val pipe_expr : expr t
     the comparison around it *)
 
 val match_expr : expr t
-(** Parses a pattern matching expression *)
+(** Parses a pattern matching expression. A bar may stand before the first case
+    as well as between the cases, which lets every case line up under the same
+    column *)
 
 val wildcard_pat : pattern t
 (** Parses a wildcard pattern `_` *)

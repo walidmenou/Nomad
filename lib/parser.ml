@@ -377,6 +377,7 @@ and let_expr input =
 and match_expr input =
   ( keyword "match" |>> expr |*> fun exp ->
     keyword "with"
+    |>> maybe (keyword "|")
     |>> sepby (keyword "|")
           ( pattern <<| arrow |*> fun p ->
             expr |*> fun exp -> return (p, exp) )

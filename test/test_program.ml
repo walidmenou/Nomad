@@ -603,6 +603,19 @@ let test_match () =
     [ "3" ] ();
   check_run "let a = match 1 with _ -> 0 | 1 -> 9" [ "0" ] ()
 
+let test_leading_bar () =
+  check_run "let a = match [1; 2] with | [] -> 0 | x :: xs -> x" [ "1" ] ();
+  check_run
+    "let rec length l =\n\
+    \  match l with\n\
+    \  | [] -> 0\n\
+    \  | x :: xs -> 1 + length xs\n\
+     length [1; 2; 3]"
+    [ "<fun> : 'a list -> int"; "3" ]
+    ();
+  check_run "let a = [match x with | 0 -> 9 | n -> n | x <- [0; 1; 2]]"
+    [ "[9; 1; 2]" ] ()
+
 let test_runtime_errors () =
   check_eval_error "let a = 1 / 0" "Division by zero" ();
   check_eval_error "let a = match [1] with [] -> 0 | x :: xs -> 1 / 0"
@@ -717,6 +730,7 @@ let tests =
     ("recursion", `Quick, test_recursion);
     ("cons", `Quick, test_cons);
     ("match", `Quick, test_match);
+    ("leading bar", `Quick, test_leading_bar);
     ("runtime errors", `Quick, test_runtime_errors);
     ("type errors", `Quick, test_type_errors);
     ("examples", `Quick, test_examples);
