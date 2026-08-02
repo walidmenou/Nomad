@@ -43,6 +43,7 @@ type pattern =
   | PatString of string
   | PatCons of pattern * pattern
   | PatTuple of pattern list
+  | PatCon of ident * pattern list
   | PatNil
 
 type expr =

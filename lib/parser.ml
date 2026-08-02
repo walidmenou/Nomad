@@ -259,7 +259,13 @@ let constructor =
   con_ident |*> fun name ->
   many type_atom |*> fun args -> return (name, args)
 
-let rec pattern input = chain_right_pat (keyword "::") atom_pat input
+let rec pattern input = chain_right_pat (keyword "::") applied_pat input
+and applied_pat input = (con_pat <|> atom_pat) input
+
+and con_pat input =
+  ( con_ident |*> fun c ->
+    many atom_pat |*> fun ps -> return (PatCon (c, ps)) )
+    input
 
 and chain_right_pat op_p exp_p input =
   ( exp_p |*> fun first ->
@@ -276,7 +282,8 @@ and paren_pat input =
 
 and atom_pat input =
   (nil_pat <|> wildcard_pat <|> bool_pat <|> var_pat <|> int_pat <|> string_pat
- <|> paren_pat)
+  <|> (con_ident |*> fun c -> return (PatCon (c, [])))
+  <|> paren_pat)
     input
 
 let rec expr input =

@@ -63,6 +63,13 @@ let rec string_of_pat = function
   | PatNil -> "[]"
   | PatCons (p1, p2) -> string_of_pat p1 ^ " :: " ^ string_of_pat p2
   | PatTuple ps -> "(" ^ String.concat ", " (List.map string_of_pat ps) ^ ")"
+  | PatCon (c, []) -> c
+  | PatCon (c, ps) -> c ^ " " ^ String.concat " " (List.map nested_pat ps)
+
+and nested_pat p =
+  match p with
+  | PatCon (_, _ :: _) | PatCons _ -> "(" ^ string_of_pat p ^ ")"
+  | _ -> string_of_pat p
 
 let rec string_of_expr = function
   | Int i -> string_of_int i

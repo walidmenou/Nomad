@@ -266,6 +266,77 @@ let test_declaration_errors () =
     "In A 1: Type mismatch: int list and int" ();
   check_type_fails "type 'a box = Box 'a\nlet a = [Box 1; Box \"s\"]" ()
 
+let test_constructor_patterns () =
+  check_run
+    "type shape = Circle int | Rect int int\n\
+     let area s = match s with Circle r -> r * r | Rect w h -> w * h\n\
+     let a = area (Circle 3)\n\
+     let b = area (Rect 3 4)"
+    [ "<fun> : shape -> int"; "9"; "12" ]
+    ();
+  check_run
+    "type 'a option = None | Some 'a\n\
+     let get d o = match o with None -> d | Some x -> x\n\
+     let a = get 0 (Some 5)\n\
+     let b = get \"z\" None"
+    [ "<fun> : 'a -> 'a option -> 'a"; "5"; "\"z\"" ]
+    ();
+  check_run
+    "type 'a option = None | Some 'a\n\
+     let a = [x | Some x <- [Some 1; None; Some 3]]"
+    [ "[1; 3]" ] ()
+
+let test_constructor_recursion () =
+  check_run
+    "type tree = Leaf | Node tree int tree\n\
+     let rec total t = match t with Leaf -> 0 | Node l x r -> total l + x + \
+     total r\n\
+     let a = total (Node (Node Leaf 1 Leaf) 2 (Node Leaf 3 Leaf))"
+    [ "<fun> : tree -> int"; "6" ]
+    ();
+  check_run
+    "type tree = Leaf | Node tree int tree\n\
+     let rec depth t = match t with Leaf -> 0 | Node l x r -> 1 + depth l\n\
+     let a = depth (Node (Node Leaf 1 Leaf) 2 Leaf)"
+    [ "<fun> : tree -> int"; "2" ]
+    ()
+
+let test_constructor_exhaustiveness () =
+  check_run
+    "type colour = Red | Green | Blue\n\
+     let name c = match c with Red -> \"r\" | Green -> \"g\" | Blue -> \"b\""
+    [ "<fun> : colour -> string" ]
+    ();
+  check_type_error
+    "type colour = Red | Green | Blue\n\
+     let name c = match c with Red -> \"r\" | Green -> \"g\""
+    "This match is not exhaustive" ();
+  check_run
+    "type colour = Red | Green | Blue\n\
+     let name c = match c with Red -> \"r\" | _ -> \"other\""
+    [ "<fun> : colour -> string" ]
+    ();
+  check_type_error
+    "type 'a option = None | Some 'a\nlet get o = match o with Some x -> x"
+    "This match is not exhaustive" ();
+  check_run
+    "type 'a option = None | Some 'a\n\
+     let flat o = match o with None -> None | Some None -> None | Some (Some \
+     x) -> Some x"
+    [ "<fun> : 'a option option -> 'a option" ]
+    ()
+
+let test_constructor_pattern_errors () =
+  check_type_error
+    "type shape = Circle int\nlet a = match Circle 1 with Circle -> 0"
+    "Wrong number of arguments for Circle" ();
+  check_type_error
+    "type shape = Circle int | Rect int int\n\
+     let a = match Circle 1 with Circle r w -> 0 | Rect w h -> 1"
+    "Wrong number of arguments for Circle" ();
+  check_type_error "let a = match 1 with Nope -> 0" "Unbound constructor Nope"
+    ()
+
 let test_printing () =
   check_run "let s = \"hi\"" [ "\"hi\"" ] ();
   check_run "let u = ()" [ "()" ] ();
@@ -612,6 +683,10 @@ let tests =
     ("recursive declarations", `Quick, test_recursive_declarations);
     ("declaration equality", `Quick, test_declaration_equality);
     ("declaration errors", `Quick, test_declaration_errors);
+    ("constructor patterns", `Quick, test_constructor_patterns);
+    ("constructor recursion", `Quick, test_constructor_recursion);
+    ("constructor exhaustiveness", `Quick, test_constructor_exhaustiveness);
+    ("constructor pattern errors", `Quick, test_constructor_pattern_errors);
     ("printing", `Quick, test_printing);
     ("arithmetic", `Quick, test_arithmetic);
     ("append", `Quick, test_append);

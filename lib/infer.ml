@@ -68,7 +68,7 @@ let join b1 b2 =
 
 let bind_with s = List.map (fun (id, t) -> (id, Subst.apply s t))
 
-let rec infer_pat pat =
+let rec infer_pat env pat =
   match pat with
   | PatWildcard -> ([], fresh ())
   | PatVar id ->
@@ -79,13 +79,34 @@ let rec infer_pat pat =
   | PatString _ -> ([], TString)
   | PatNil -> ([], TList (fresh ()))
   | PatCons (p1, p2) ->
-      let b1, t1 = infer_pat p1 in
-      let b2, t2 = infer_pat p2 in
+      let b1, t1 = infer_pat env p1 in
+      let b2, t2 = infer_pat env p2 in
       let s = Subst.unify t2 (TList t1) in
       (bind_with s (join b1 b2), Subst.apply s t2)
   | PatTuple ps ->
-      let bs, ts = List.split (List.map infer_pat ps) in
+      let bs, ts = List.split (List.map (infer_pat env) ps) in
       (List.fold_left join [] bs, TTuple ts)
+  | PatCon (c, ps) ->
+      let sc =
+        match List.assoc_opt c env with
+        | Some sc -> sc
+        | None -> raise (Subst.TypeError ("Unbound constructor " ^ c))
+      in
+      let wrong () =
+        raise (Subst.TypeError ("Wrong number of arguments for " ^ c))
+      in
+      let bs, ts = List.split (List.map (infer_pat env) ps) in
+      let rec peel s t ts =
+        match (t, ts) with
+        | _, [] -> (s, Subst.apply s t)
+        | TArrow (a, r), t1 :: rest ->
+            let a = Subst.apply s a and t1 = Subst.apply s t1 in
+            peel (Subst.compose (Subst.unify a t1) s) r rest
+        | _ -> wrong ()
+      in
+      let s, t = peel [] (instantiate sc) ts in
+      if match t with TArrow _ -> true | _ -> false then wrong ()
+      else (bind_with s (List.fold_left join [] bs), t)
 
 let rec infer_w env e =
   match e with
@@ -172,7 +193,7 @@ let rec infer_w env e =
       let s =
         List.fold_left
           (fun s (pat, body) ->
-            let bindings, t_pat = infer_pat pat in
+            let bindings, t_pat = infer_pat env pat in
             let s = Subst.compose (Subst.unify (Subst.apply s t_e) t_pat) s in
             let bound =
               List.map (fun (id, t) -> (id, mono (Subst.apply s t))) bindings
@@ -190,7 +211,7 @@ and infer_qual s env q =
   match q with
   | Gen (p, src) ->
       let s, t_src = step s env src in
-      let bindings, t_pat = infer_pat p in
+      let bindings, t_pat = infer_pat env p in
       let s = Subst.compose (Subst.unify t_src (TList t_pat)) s in
       let bound =
         List.map (fun (id, t) -> (id, mono (Subst.apply s t))) bindings
