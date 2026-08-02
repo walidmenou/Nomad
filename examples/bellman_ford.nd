@@ -3,12 +3,12 @@ let min a b = if a < b then a else b
 
 let rec at l i =
   match l with
-  [] -> inf
+  | [] -> inf
   | x :: r -> if i = 0 then x else at r (i - 1)
 
 let rec best dist v edges =
   match edges with
-  [] -> inf
+  | [] -> inf
   | e :: rest ->
       (match e with
       (a, b, w) ->

@@ -5,29 +5,29 @@ let empty = Node false []
 
 let rec child c kids =
   match kids with
-  [] -> None
+  | [] -> None
   | (a, t) :: rest -> if a = c then Some t else child c rest
 
 let without c kids = [(a, t) | (a, t) <- kids, a <> c]
 
 let rec insert w t =
   match (w, t) with
-  ([], Node ends kids) -> Node true kids
+  | ([], Node ends kids) -> Node true kids
   | (c :: rest, Node ends kids) ->
       let sub = match child c kids with None -> empty | Some s -> s in
       Node ends ((c, insert rest sub) :: without c kids)
 
 let rec member w t =
   match (w, t) with
-  ([], Node ends kids) -> ends
+  | ([], Node ends kids) -> ends
   | (c :: rest, Node ends kids) ->
       (match child c kids with
-      None -> false
+      | None -> false
       | Some s -> member rest s)
 
 let rec add_all ws t =
   match ws with
-  [] -> t
+  | [] -> t
   | w :: rest -> add_all rest (insert w t)
 
 let t = add_all [[1; 2]; [1; 2; 3]; [2]] empty

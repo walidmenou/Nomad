@@ -2,7 +2,7 @@ let max a b = if a > b then a else b
 
 let rec at l i =
   match l with
-  [] -> 0
+  | [] -> 0
   | x :: r -> if i = 0 then x else at r (i - 1)
 
 let take cap row item =
@@ -13,7 +13,7 @@ let take cap row item =
 
 let rec fill cap row items =
   match items with
-  [] -> row
+  | [] -> row
   | it :: rest -> fill cap (take cap row it) rest
 
 let knapsack cap items = at (fill cap [0 | w <- [0..cap]] items) cap

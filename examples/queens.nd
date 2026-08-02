@@ -1,6 +1,6 @@
 let rec safe q qs d =
   match qs with
-  [] -> true
+  | [] -> true
   | p :: rest -> q <> p && q <> p + d && q <> p - d && safe q rest (d + 1)
 
 let rec queens n k =

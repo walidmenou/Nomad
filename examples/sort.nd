@@ -1,6 +1,6 @@
 let rec quicksort lst =
   match lst with
-  [] -> []
+  | [] -> []
   | x :: xs ->
       quicksort [y | y <- xs, y <= x] @ [x] @ quicksort [y | y <- xs, y > x]
 

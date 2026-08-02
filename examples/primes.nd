@@ -2,7 +2,7 @@ let not b = if b then false else true
 
 let rec any p l =
   match l with
-  [] -> false
+  | [] -> false
   | x :: xs -> p x || any p xs
 
 let primes n = [x | x <- [2..n], not (any (fun d -> x % d = 0) [2..x - 1])]
