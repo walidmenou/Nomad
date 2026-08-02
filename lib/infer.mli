@@ -9,6 +9,9 @@ type scheme =
 type env = (ident * scheme) list
 (** The scheme each identifier in scope was given *)
 
+val fresh : unit -> typ
+(** A type variable no other part of the program is using *)
+
 val mono : typ -> scheme
 (** The scheme of a type that stands for itself and nothing else, which is what
     a function parameter and a pattern variable get *)

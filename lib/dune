@@ -1,4 +1,4 @@
 (library
  (name nomad)
  (public_name nomad)
- (modules ast parser eval util subst infer check pat pretty))
+ (modules adt ast parser eval util subst infer check pat pretty))

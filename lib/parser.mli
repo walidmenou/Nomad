@@ -110,14 +110,49 @@ val parens : 'a t -> 'a t
 val brackets : 'a t -> 'a t
 (** Parses the given parser between square brackets *)
 
-val alpha : char t
-(** Parses a lowercase or uppercase character *)
+val lower : char t
+(** Parses a lowercase character, which is how a variable name starts *)
+
+val upper : char t
+(** Parses an uppercase character, which is how a constructor name starts *)
+
+val name_after : char t -> string t
+(** Parses a name whose first character the given parser accepts and whose rest
+    is letters, digits and underscores, rejecting the reserved words *)
 
 val alphanumeric : char t
 (** Parses a lowercase or uppercase character or a digit *)
 
 val ident : string t
-(** parses an identifier: alpha character followed by alphanumeric characters *)
+(** Parses a variable name: a lowercase letter followed by letters, digits and
+    underscores *)
+
+val con_ident : string t
+(** Parses a constructor name, which is the same but starts with a capital. The
+    case is what tells a constructor from a variable, so no declaration has to
+    be in scope to read one *)
+
+val type_var : string t
+(** Parses the name of a type variable, written with a leading quote as in [\'a]
+*)
+
+val type_expr : type_expr t
+(** Parses a written type. [->] groups to the right, [*] makes a tuple, and a
+    type applied to arguments writes them in front of it, as [int list] does *)
+
+val type_atom : type_expr t
+(** Parses a type that needs no parentheses to sit beside another one. The
+    arguments of a constructor are parsed this way, so an applied type among
+    them has to be parenthesised *)
+
+val type_params : string list t
+(** Parses the variables a declaration takes. One is written on its own and
+    several are written in parentheses separated by commas, which is also how
+    they are supplied where the type is used *)
+
+val constructor : (string * type_expr list) t
+(** Parses one alternative of a type declaration: its name and the types of the
+    arguments it takes *)
 
 val int_lit : expr t
 (** Parses an integer literal expression, e.g: "123". A literal carries no sign,

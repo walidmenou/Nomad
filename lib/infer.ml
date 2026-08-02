@@ -15,7 +15,7 @@ let rec vars = function
   | TVar v -> [ v ]
   | TArrow (t1, t2) -> vars t1 @ vars t2
   | TList t -> vars t
-  | TTuple ts -> List.concat_map vars ts
+  | TTuple ts | TCon (_, ts) -> List.concat_map vars ts
   | _ -> []
 
 let mono t = Forall ([], t)

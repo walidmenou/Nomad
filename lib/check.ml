@@ -1,8 +1,47 @@
 open Ast
 open Infer
 
+let base =
+  [ ("int", TInt); ("bool", TBool); ("string", TString); ("unit", TUnit) ]
+
+let rec convert params te =
+  match te with
+  | TEVar v -> (
+      match List.assoc_opt v params with
+      | Some t -> t
+      | None -> raise (Subst.TypeError ("Unbound type variable '" ^ v)))
+  | TETuple ts -> TTuple (List.map (convert params) ts)
+  | TEArrow (a, b) -> TArrow (convert params a, convert params b)
+  | TECon ("list", [ t ]) -> TList (convert params t)
+  | TECon ("list", _) ->
+      raise (Subst.TypeError "Wrong number of arguments for list")
+  | TECon (n, ts) -> (
+      let ts = List.map (convert params) ts in
+      match (List.assoc_opt n base, Adt.find n) with
+      | Some t, _ when ts = [] -> t
+      | _, Some d when List.length d.params = List.length ts -> TCon (n, ts)
+      | _, Some _ ->
+          raise (Subst.TypeError ("Wrong number of arguments for " ^ n))
+      | None, None -> raise (Subst.TypeError ("Unknown type " ^ n))
+      | Some _, None -> raise (Subst.TypeError ("Unknown type " ^ n)))
+
+let declare name params cons =
+  let bound = List.map (fun p -> (p, fresh ())) params in
+  let ids =
+    List.map (fun (_, t) -> match t with TVar v -> v | _ -> 0) bound
+  in
+  Adt.declare name { params = ids; cons = [] };
+  let cons = List.map (fun (c, ts) -> (c, List.map (convert bound) ts)) cons in
+  Adt.declare name { params = ids; cons };
+  let result = TCon (name, List.map snd bound) in
+  List.map
+    (fun (c, ts) ->
+      (c, Forall (ids, List.fold_right (fun t acc -> TArrow (t, acc)) ts result)))
+    cons
+
 let check_stmt env stmt =
   match stmt with
+  | TypeStmt (name, params, cons) -> (declare name params cons @ env, TUnit)
   | ExprStmt e ->
       let s, t = infer_w env e in
       (apply_env s env, Subst.apply s t)
@@ -17,8 +56,9 @@ let check_stmt env stmt =
       ((id, generalize env t) :: env, t)
 
 let check_program stmts =
+  Adt.reset ();
   let step (env, ts) stmt =
     let env, t = check_stmt env stmt in
-    (env, t :: ts)
+    (env, match stmt with TypeStmt _ -> ts | _ -> t :: ts)
   in
   List.rev (snd (List.fold_left step ([], []) stmts))

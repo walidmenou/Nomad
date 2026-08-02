@@ -198,6 +198,62 @@ let test_parenthesised_patterns () =
   check_run "let a = match [[1; 2]] with (x :: xs) :: r -> x | _ -> 0" [ "1" ]
     ()
 
+let test_declarations () =
+  check_run "type shape = Circle int | Rect int int\nlet a = Circle 5"
+    [ "Circle 5" ] ();
+  check_run "type shape = Circle int | Rect int int\nlet a = Rect 3 4"
+    [ "Rect 3 4" ] ();
+  check_run "type colour = Red | Green\nlet a = Red\nlet b = [Red; Green]"
+    [ "Red"; "[Red; Green]" ] ()
+
+let test_declaration_types () =
+  check_run "type shape = Circle int\nlet a = Circle" [ "<fun> : int -> shape" ]
+    ();
+  check_run "type 'a box = Box 'a\nlet a = Box 1\nlet b = Box \"s\""
+    [ "Box 1"; "Box \"s\"" ] ();
+  check_run "type 'a box = Box 'a\nlet wrap x = Box x"
+    [ "<fun> : 'a -> 'a box" ] ();
+  check_run "type ('a, 'b) either = Left 'a | Right 'b\nlet a = Left 1"
+    [ "Left 1" ] ();
+  check_run "type 'a box = Box 'a\nlet a = Box [[1]]\nlet b = Box (Box 1)"
+    [ "Box [[1]]"; "Box (Box 1)" ]
+    ();
+  check_run
+    "type 'a option = None | Some 'a\n\
+     type t = S (int option list)\n\
+     let a = S [Some 1; None]"
+    [ "S [Some 1; None]" ] ()
+
+let test_recursive_declarations () =
+  check_run "type tree = Leaf | Node tree int tree\nlet t = Node Leaf 1 Leaf"
+    [ "Node Leaf 1 Leaf" ] ();
+  check_run
+    "type tree = Leaf | Node tree int tree\n\
+     let t = Node (Node Leaf 1 Leaf) 2 Leaf"
+    [ "Node (Node Leaf 1 Leaf) 2 Leaf" ]
+    ()
+
+let test_declaration_equality () =
+  check_run
+    "type shape = Circle int | Rect int int\nlet a = Circle 5 = Circle 5"
+    [ "true" ] ();
+  check_run
+    "type shape = Circle int | Rect int int\nlet a = Circle 5 = Rect 3 4"
+    [ "false" ] ()
+
+let test_declaration_errors () =
+  check_type_error "type shape = Circle int\nlet a = Circle true"
+    "In Circle true: Type mismatch: int and bool" ();
+  check_type_error "let a = Nope 1" "Unbound variable Nope" ();
+  check_type_error "type t = A bogus" "Unknown type bogus" ();
+  check_type_error "type t = A 'z" "Unbound type variable 'z" ();
+  check_type_error
+    "type ('a, 'b) either = Left 'a | Right 'b\ntype t = A (int either)"
+    "Wrong number of arguments for either" ();
+  check_type_error "type t = A (int list)\nlet a = A 1"
+    "In A 1: Type mismatch: int list and int" ();
+  check_type_fails "type 'a box = Box 'a\nlet a = [Box 1; Box \"s\"]" ()
+
 let test_printing () =
   check_run "let s = \"hi\"" [ "\"hi\"" ] ();
   check_run "let u = ()" [ "()" ] ();
@@ -538,6 +594,11 @@ let tests =
     ("tuple patterns", `Quick, test_tuple_patterns);
     ("tuple exhaustiveness", `Quick, test_tuple_exhaustiveness);
     ("parenthesised patterns", `Quick, test_parenthesised_patterns);
+    ("declarations", `Quick, test_declarations);
+    ("declaration types", `Quick, test_declaration_types);
+    ("recursive declarations", `Quick, test_recursive_declarations);
+    ("declaration equality", `Quick, test_declaration_equality);
+    ("declaration errors", `Quick, test_declaration_errors);
     ("printing", `Quick, test_printing);
     ("arithmetic", `Quick, test_arithmetic);
     ("append", `Quick, test_append);

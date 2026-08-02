@@ -29,7 +29,9 @@ let repl () =
                   List.fold_left2
                     (fun e t stmt ->
                       let e', v = eval_stmt e stmt in
-                      print_endline (show_val t v);
+                      (match stmt with
+                      | TypeStmt _ -> ()
+                      | _ -> print_endline (show_val t v));
                       e')
                     eval_env (List.rev types) stmts
                 in

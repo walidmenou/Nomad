@@ -11,11 +11,14 @@ type value =
   | VTuple of value list
   | VClos of ident * expr * env
   | VRecClos of ident * ident * expr * env
+  | VCon of ident * int * value list
       (** What an expression evaluates to. A closure carries the environment its
           function was written in, so a free variable in the body means what it
           meant there rather than what it means at the call. A recursive closure
           also carries the name the function calls itself by, which is how
-          recursion works without mutation *)
+          recursion works without mutation. A constructor carries its name, the
+          number of arguments it takes and the ones it has been given, so it
+          behaves as a function until it has them all *)
 
 and env = (ident * value) list
 (** The value each identifier in scope stands for *)
@@ -33,17 +36,19 @@ val eval : env -> expr -> value
 
 val eval_stmt : env -> statement -> env * value
 (** Evaluates a statement and returns the environment the next one runs in,
-    along with the value it produced *)
+    along with the value it produced. A type declaration binds each of its
+    constructors and produces nothing *)
 
 val show_val : typ -> value -> string
 (** Prints a value the way the source would write it. A function has no useful
     form of its own, so it prints as [<fun>] followed by its type, which is the
-    informative part. The type comes from the checker, since the evaluator does
-    not compute one *)
+    informative part, and a constructor that is still short of arguments prints
+    the same way. The type comes from the checker, since the evaluator does not
+    compute one *)
 
 val run_program : program -> value list
 (** The value each statement of a program produces, in order, without printing
-    anything *)
+    anything. A type declaration contributes nothing *)
 
 val eval_program : typ list -> program -> unit
 (** Runs every statement of a program in order and prints each value against the

@@ -192,6 +192,42 @@ let test_statement () =
     ();
   check_parse statement "1 + 1" (ExprStmt (BinOp (Int 1, Add, Int 1))) ()
 
+let test_type_stmt () =
+  check_parse statement "type shape = Circle int | Rect int int"
+    (TypeStmt
+       ( "shape",
+         [],
+         [
+           ("Circle", [ TECon ("int", []) ]);
+           ("Rect", [ TECon ("int", []); TECon ("int", []) ]);
+         ] ))
+    ();
+  check_parse statement "type 'a option = None | Some 'a"
+    (TypeStmt ("option", [ "a" ], [ ("None", []); ("Some", [ TEVar "a" ]) ]))
+    ();
+  check_parse statement "type ('a, 'b) either = Left 'a | Right 'b"
+    (TypeStmt
+       ( "either",
+         [ "a"; "b" ],
+         [ ("Left", [ TEVar "a" ]); ("Right", [ TEVar "b" ]) ] ))
+    ()
+
+let test_type_expr () =
+  check_parse type_expr "int" (TECon ("int", [])) ();
+  check_parse type_expr "int list" (TECon ("list", [ TECon ("int", []) ])) ();
+  check_parse type_expr "int option list"
+    (TECon ("list", [ TECon ("option", [ TECon ("int", []) ]) ]))
+    ();
+  check_parse type_expr "(int, bool) either"
+    (TECon ("either", [ TECon ("int", []); TECon ("bool", []) ]))
+    ();
+  check_parse type_expr "int * bool"
+    (TETuple [ TECon ("int", []); TECon ("bool", []) ])
+    ();
+  check_parse type_expr "int -> bool -> int"
+    (TEArrow (TECon ("int", []), TEArrow (TECon ("bool", []), TECon ("int", []))))
+    ()
+
 let test_program () =
   check_parse program "let x = 1 let y = 2 if true then x + y else 0"
     [
@@ -224,5 +260,7 @@ let tests =
     ("match", `Quick, test_match_expr);
     ("patterns", `Quick, test_pattern);
     ("statements", `Quick, test_statement);
+    ("type declarations", `Quick, test_type_stmt);
+    ("type expressions", `Quick, test_type_expr);
     ("programs", `Quick, test_program);
   ]

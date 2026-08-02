@@ -12,6 +12,7 @@ type value =
   | VTuple of value list
   | VClos of ident * expr * env
   | VRecClos of ident * ident * expr * env
+  | VCon of ident * int * value list
 
 and env = (ident * value) list
 
@@ -67,6 +68,7 @@ and apply f arg =
   match f with
   | VClos (id, body, env) -> eval ((id, arg) :: env) body
   | VRecClos (name, id, body, env) -> eval ((id, arg) :: (name, f) :: env) body
+  | VCon (name, n, vs) -> VCon (name, n, vs @ [ arg ])
   | _ -> raise (EvaluationError "Application of non-function")
 
 and rec_value env id e =
@@ -125,12 +127,19 @@ and equal v1 v2 =
   match (v1, v2) with
   | (VClos _ | VRecClos _), _ | _, (VClos _ | VRecClos _) ->
       raise (EvaluationError "Cannot compare functions")
+  | VCon (n1, _, vs1), VCon (n2, _, vs2) ->
+      n1 = n2
+      && List.length vs1 = List.length vs2
+      && List.for_all2 equal vs1 vs2
   | (VList vs1 | VTuple vs1), (VList vs2 | VTuple vs2) ->
       List.length vs1 = List.length vs2 && List.for_all2 equal vs1 vs2
   | _ -> v1 = v2
 
 let eval_stmt env stmt =
   match stmt with
+  | TypeStmt (_, _, cons) ->
+      let bind (c, args) = (c, VCon (c, List.length args, [])) in
+      (List.map bind cons @ env, VUnit)
   | ExprStmt e -> (env, eval env e)
   | LetStmt (id, e) ->
       let v = eval env e in
@@ -146,17 +155,23 @@ let rec show = function
   | VUnit -> "()"
   | VList vs -> "[" ^ String.concat "; " (List.map show vs) ^ "]"
   | VTuple vs -> "(" ^ String.concat ", " (List.map show vs) ^ ")"
+  | VCon (name, _, []) -> name
+  | VCon (name, _, vs) -> String.concat " " (name :: List.map nested vs)
   | VClos _ | VRecClos _ -> "<fun>"
+
+and nested v =
+  match v with VCon (_, _, _ :: _) -> "(" ^ show v ^ ")" | _ -> show v
 
 let show_val ty v =
   match v with
   | VClos _ | VRecClos _ -> "<fun> : " ^ display_typ ty
+  | VCon (_, n, vs) when List.length vs < n -> "<fun> : " ^ display_typ ty
   | _ -> show v
 
 let run_program stmts =
   let step (env, vs) stmt =
     let env, v = eval_stmt env stmt in
-    (env, v :: vs)
+    (env, match stmt with TypeStmt _ -> vs | _ -> v :: vs)
   in
   List.rev (snd (List.fold_left step ([], []) stmts))
 

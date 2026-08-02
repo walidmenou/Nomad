@@ -8,6 +8,7 @@ let rec typ_with name = function
   | TArrow (t1, t2) -> "(" ^ typ_with name t1 ^ " -> " ^ typ_with name t2 ^ ")"
   | TList t -> typ_with name t ^ " list"
   | TTuple ts -> "(" ^ String.concat " * " (List.map (typ_with name) ts) ^ ")"
+  | TCon (n, ts) -> String.concat " " (List.map (typ_with name) ts @ [ n ])
   | TVar v -> name v
 
 let string_of_typ t = typ_with (fun v -> "'a" ^ string_of_int v) t
@@ -17,7 +18,7 @@ let display_typ t =
     | TVar v -> if List.mem v acc then acc else acc @ [ v ]
     | TArrow (t1, t2) -> order (order acc t1) t2
     | TList t -> order acc t
-    | TTuple ts -> List.fold_left order acc ts
+    | TTuple ts | TCon (_, ts) -> List.fold_left order acc ts
     | _ -> acc
   in
   let names = List.mapi (fun i v -> (v, i)) (order [] t) in
@@ -31,6 +32,7 @@ let display_typ t =
     | TArrow (t1, t2) -> arg t1 ^ " -> " ^ show t2
     | TList t -> arg t ^ " list"
     | TTuple ts -> "(" ^ String.concat " * " (List.map show ts) ^ ")"
+    | TCon (n, ts) -> String.concat " " (List.map arg ts @ [ n ])
     | t -> typ_with name t
   and arg = function TArrow _ as t -> "(" ^ show t ^ ")" | t -> show t in
   show t

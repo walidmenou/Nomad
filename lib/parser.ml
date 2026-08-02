@@ -3,7 +3,9 @@ open Ast
 
 type 'a t = char list -> ('a * char list) option
 
-let keywords = [ "let"; "in"; "fun"; "if"; "then"; "else"; "match"; "with" ]
+let keywords =
+  [ "let"; "in"; "fun"; "if"; "then"; "else"; "match"; "with"; "type" ]
+
 let return x = fun input -> Some (x, input)
 let none = fun _ -> None
 
@@ -107,20 +109,24 @@ let comma = symbol ','
 let semicolon = symbol ';'
 let parens p = between lparen rparen p
 let brackets p = between lbracket rbracket p
-let alpha = satisfies (function 'a' .. 'z' | 'A' .. 'Z' -> true | _ -> false)
+let lower = satisfies (function 'a' .. 'z' -> true | _ -> false)
+let upper = satisfies (function 'A' .. 'Z' -> true | _ -> false)
 
 let alphanumeric =
   satisfies (function
     | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' -> true
     | _ -> false)
 
-let ident =
+let name_after first =
   token
-    ( alpha |*> fun x ->
+    ( first |*> fun x ->
       many alphanumeric |*> fun xs ->
       let s = ltos (x :: xs) in
       if List.mem s keywords then none else return s )
 
+let ident = name_after lower
+let con_ident = name_after upper
+let type_var = char '\'' |>> ident
 let int_lit = natural |*> fun x -> return (Int x)
 
 let boolean =
@@ -135,6 +141,7 @@ let string =
 
 let string_lit = token (string |*> fun s -> return (String s))
 let var_expr = ident |*> fun x -> return (Var x)
+let con_expr = con_ident |*> fun x -> return (Var x)
 let lit_expr = int_lit <|> bool_lit <|> unit_lit <|> string_lit
 
 let addop =
@@ -203,6 +210,54 @@ let var_pat = ident |*> fun x -> return (PatVar x)
 let int_pat = integer |*> fun i -> return (PatInt i)
 let bool_pat = boolean |*> fun b -> return (PatBool b)
 let string_pat = token (string |*> fun s -> return (PatString s))
+
+let rec type_expr input =
+  ( type_prod |*> fun t ->
+    arrow |>> type_expr |*> (fun r -> return (TEArrow (t, r))) <|> return t )
+    input
+
+and type_prod input =
+  ( type_app |*> fun first ->
+    many (keyword "*" |>> type_app) |*> fun rest ->
+    return (if rest = [] then first else TETuple (first :: rest)) )
+    input
+
+and type_app input =
+  ( type_args |*> fun args ->
+    many ident |*> fun names ->
+    match (args, names) with
+    | [ t ], [] -> return t
+    | _, [] -> none
+    | _, n :: ns ->
+        return
+          (List.fold_left
+             (fun acc n -> TECon (n, [ acc ]))
+             (TECon (n, args))
+             ns) )
+    input
+
+and type_args input =
+  (parens (sepby comma type_expr)
+  |*> (fun ts -> if List.length ts < 2 then none else return ts)
+  <|> (type_atom |*> fun t -> return [ t ]))
+    input
+
+and type_atom input =
+  (type_var
+  |*> (fun v -> return (TEVar v))
+  <|> (ident |*> fun n -> return (TECon (n, [])))
+  <|> parens type_expr)
+    input
+
+let type_params =
+  parens (sepby comma type_var)
+  |*> (fun ps -> if List.length ps < 2 then none else return ps)
+  <|> (type_var |*> fun p -> return [ p ])
+  <|> return []
+
+let constructor =
+  con_ident |*> fun name ->
+  many type_atom |*> fun args -> return (name, args)
 
 let rec pattern input = chain_right_pat (keyword "::") atom_pat input
 
@@ -290,7 +345,8 @@ and paren_expr input =
     match es with [] -> none | [ e ] -> return e | _ -> return (Tuple es) )
     input
 
-and atom_expr input = (lit_expr <|> var_expr <|> list_expr <|> paren_expr) input
+and atom_expr input =
+  (lit_expr <|> var_expr <|> con_expr <|> list_expr <|> paren_expr) input
 
 and if_expr input =
   ( keyword "if" |>> expr |*> fun exp1 ->
@@ -342,8 +398,15 @@ let rec_stmt input =
   )
     input
 
+let type_stmt input =
+  ( keyword "type" |>> type_params |*> fun params ->
+    ident |*> fun name ->
+    keyword "=" |>> sepby (keyword "|") constructor |*> fun cons ->
+    if cons = [] then none else return (TypeStmt (name, params, cons)) )
+    input
+
 let expr_stmt input = (expr |*> fun exp -> return (ExprStmt exp)) input
-let statement input = (rec_stmt <|> let_stmt <|> expr_stmt) input
+let statement input = (type_stmt <|> rec_stmt <|> let_stmt <|> expr_stmt) input
 
 let program input =
   let sep = maybe (keyword ";;") |>> spaces in
