@@ -9,6 +9,11 @@ type scheme =
 type env = (ident * scheme) list
 (** The scheme each identifier in scope was given *)
 
+val fresh_var : unit -> int
+(** The name of a type variable no other part of the program is using. A scheme
+    has to quantify one of these rather than a number chosen by hand, since
+    instantiating a variable that maps to itself would not terminate *)
+
 val fresh : unit -> typ
 (** A type variable no other part of the program is using *)
 

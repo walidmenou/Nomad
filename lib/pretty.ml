@@ -7,6 +7,7 @@ let rec typ_with name = function
   | TUnit -> "unit"
   | TArrow (t1, t2) -> "(" ^ typ_with name t1 ^ " -> " ^ typ_with name t2 ^ ")"
   | TList t -> typ_with name t ^ " list"
+  | TArray t -> typ_with name t ^ " array"
   | TTuple ts -> "(" ^ String.concat " * " (List.map (typ_with name) ts) ^ ")"
   | TCon (n, ts) -> String.concat " " (List.map (typ_with name) ts @ [ n ])
   | TVar v -> name v
@@ -17,7 +18,7 @@ let display_typ t =
   let rec order acc = function
     | TVar v -> if List.mem v acc then acc else acc @ [ v ]
     | TArrow (t1, t2) -> order (order acc t1) t2
-    | TList t -> order acc t
+    | TList t | TArray t -> order acc t
     | TTuple ts | TCon (_, ts) -> List.fold_left order acc ts
     | _ -> acc
   in
@@ -31,6 +32,7 @@ let display_typ t =
   let rec show = function
     | TArrow (t1, t2) -> arg t1 ^ " -> " ^ show t2
     | TList t -> arg t ^ " list"
+    | TArray t -> arg t ^ " array"
     | TTuple ts -> "(" ^ String.concat " * " (List.map show ts) ^ ")"
     | TCon (n, ts) -> String.concat " " (List.map arg ts @ [ n ])
     | t -> typ_with name t
@@ -90,6 +92,9 @@ let rec string_of_expr = function
   | List exprs -> "[" ^ String.concat "; " (List.map string_of_expr exprs) ^ "]"
   | Tuple es -> "(" ^ String.concat ", " (List.map string_of_expr es) ^ ")"
   | Range (e1, e2) -> "[" ^ string_of_expr e1 ^ ".." ^ string_of_expr e2 ^ "]"
+  | Index (a, i) -> atom a ^ "[" ^ string_of_expr i ^ "]"
+  | Update (a, i, v) ->
+      atom a ^ "[" ^ string_of_expr i ^ "] := " ^ string_of_expr v
   | Comp (e, qs) ->
       "[" ^ string_of_expr e ^ " | "
       ^ String.concat ", " (List.map string_of_qual qs)

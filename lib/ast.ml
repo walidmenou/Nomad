@@ -8,6 +8,7 @@ type typ =
   | TUnit
   | TArrow of typ * typ
   | TList of typ
+  | TArray of typ
   | TTuple of typ list
   | TCon of ident * typ list
   | TVar of int
@@ -62,6 +63,8 @@ type expr =
   | Tuple of expr list
   | Range of expr * expr
   | Comp of expr * qualifier list
+  | Index of expr * expr
+  | Update of expr * expr * expr
   | Match of expr * (pattern * expr) list
 
 and qualifier = Gen of pattern * expr | Guard of expr | QLet of ident * expr

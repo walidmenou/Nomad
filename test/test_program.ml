@@ -198,6 +198,48 @@ let test_parenthesised_patterns () =
   check_run "let a = match [[1; 2]] with (x :: xs) :: r -> x | _ -> 0" [ "1" ]
     ()
 
+let test_arrays () =
+  check_run "let a = array 3 0" [ "[|0; 0; 0|]" ] ();
+  check_run "let a = array 0 0" [ "[||]" ] ();
+  check_run "let a = array 3 \"s\"" [ "[|\"s\"; \"s\"; \"s\"|]" ] ();
+  check_run "let a = array 3 0\nlet b = a[1] := 9\nlet c = size b"
+    [ "[|0; 0; 0|]"; "[|0; 9; 0|]"; "3" ]
+    ();
+  check_run "let a = array 3 0\nlet b = a[1] := 9\nlet c = b[1] + b[0]"
+    [ "[|0; 0; 0|]"; "[|0; 9; 0|]"; "9" ]
+    ()
+
+let test_array_values () =
+  check_run "let a = array 3 0\nlet b = a[1] := 9\nlet same = a = b"
+    [ "[|0; 0; 0|]"; "[|0; 9; 0|]"; "false" ]
+    ();
+  check_run "let a = array 3 0\nlet b = a[1] := 9\nlet old = a[1]"
+    [ "[|0; 0; 0|]"; "[|0; 9; 0|]"; "0" ]
+    ();
+  check_run "let a = array 2 (array 2 1)\nlet b = a[0] := (a[0][1] := 9)"
+    [ "[|[|1; 1|]; [|1; 1|]|]"; "[|[|1; 9|]; [|1; 1|]|]" ]
+    ()
+
+let test_array_types () =
+  check_run "let make n = array n 0" [ "<fun> : int -> int array" ] ();
+  check_run "let first a = a[0]" [ "<fun> : 'a array -> 'a" ] ();
+  check_run "let put a v = a[0] := v"
+    [ "<fun> : 'a array -> 'a -> 'a array" ]
+    ();
+  check_run "let g h = h [1; 2]" [ "<fun> : (int list -> 'a) -> 'a" ] ()
+
+let test_array_errors () =
+  check_eval_error "let a = array 3 0\nlet b = a[5]" "Index out of bounds" ();
+  check_eval_error "let a = array 3 0\nlet b = a[0 - 1]" "Index out of bounds"
+    ();
+  check_eval_error "let a = array (0 - 1) 0"
+    "An array needs a length of zero or more" ();
+  check_type_error "let a = array 3 0\nlet b = a[0] := \"s\""
+    "Type mismatch: int and string" ();
+  check_type_error "let a = array 3 0\nlet b = a[true]"
+    "Type mismatch: bool and int" ();
+  check_type_fails "let a = [1; 2]\nlet b = a[0]" ()
+
 let test_pattern_binding_types () =
   check_run "let tl l = match l with [] -> [] | x :: xs -> xs"
     [ "<fun> : 'a list -> 'a list" ]
@@ -693,6 +735,10 @@ let tests =
     ("tuple patterns", `Quick, test_tuple_patterns);
     ("tuple exhaustiveness", `Quick, test_tuple_exhaustiveness);
     ("parenthesised patterns", `Quick, test_parenthesised_patterns);
+    ("arrays", `Quick, test_arrays);
+    ("array values", `Quick, test_array_values);
+    ("array types", `Quick, test_array_types);
+    ("array errors", `Quick, test_array_errors);
     ("pattern binding types", `Quick, test_pattern_binding_types);
     ("declarations", `Quick, test_declarations);
     ("declaration types", `Quick, test_declaration_types);

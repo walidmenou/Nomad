@@ -13,8 +13,9 @@ let rec convert params te =
   | TETuple ts -> TTuple (List.map (convert params) ts)
   | TEArrow (a, b) -> TArrow (convert params a, convert params b)
   | TECon ("list", [ t ]) -> TList (convert params t)
-  | TECon ("list", _) ->
-      raise (Subst.TypeError "Wrong number of arguments for list")
+  | TECon ("array", [ t ]) -> TArray (convert params t)
+  | TECon ((("list" | "array") as n), _) ->
+      raise (Subst.TypeError ("Wrong number of arguments for " ^ n))
   | TECon (n, ts) -> (
       let ts = List.map (convert params) ts in
       match (List.assoc_opt n base, Adt.find n) with
@@ -61,4 +62,4 @@ let check_program stmts =
     let env, t = check_stmt env stmt in
     (env, match stmt with TypeStmt _ -> ts | _ -> t :: ts)
   in
-  List.rev (snd (List.fold_left step ([], []) stmts))
+  List.rev (snd (List.fold_left step (Builtin.types, []) stmts))

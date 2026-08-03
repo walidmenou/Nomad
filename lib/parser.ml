@@ -117,13 +117,13 @@ let alphanumeric =
     | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' -> true
     | _ -> false)
 
-let name_after first =
-  token
-    ( first |*> fun x ->
-      many alphanumeric |*> fun xs ->
-      let s = ltos (x :: xs) in
-      if List.mem s keywords then none else return s )
+let name_body first =
+  first |*> fun x ->
+  many alphanumeric |*> fun xs ->
+  let s = ltos (x :: xs) in
+  if List.mem s keywords then none else return s
 
+let name_after first = token (name_body first)
 let ident = name_after lower
 let con_ident = name_after upper
 let type_var = char '\'' |>> ident
@@ -287,7 +287,8 @@ and atom_pat input =
     input
 
 let rec expr input =
-  (if_expr <|> fun_expr <|> let_rec_expr <|> let_expr <|> match_expr <|> or_expr)
+  (if_expr <|> fun_expr <|> let_rec_expr <|> let_expr <|> match_expr
+ <|> update_expr <|> or_expr)
     input
 
 and or_expr input = chain_left orop and_expr input
@@ -352,8 +353,25 @@ and paren_expr input =
     match es with [] -> none | [ e ] -> return e | _ -> return (Tuple es) )
     input
 
+and indexed input =
+  ( name_body lower
+  |*> (fun x -> return (Var x))
+  <|> between lparen (char ')') expr
+  |*> fun base ->
+    some (between (char '[') rbracket expr) |*> fun idxs ->
+    return (List.fold_left (fun acc i -> Index (acc, i)) base idxs) )
+    input
+
+and update_expr input =
+  ( indexed <<| keyword ":=" |*> fun target ->
+    match target with
+    | Index (arr, i) -> expr |*> fun v -> return (Update (arr, i, v))
+    | _ -> none )
+    input
+
 and atom_expr input =
-  (lit_expr <|> var_expr <|> con_expr <|> list_expr <|> paren_expr) input
+  (indexed <|> lit_expr <|> var_expr <|> con_expr <|> list_expr <|> paren_expr)
+    input
 
 and if_expr input =
   ( keyword "if" |>> expr |*> fun exp1 ->

@@ -47,7 +47,7 @@ let repl () =
               print_endline ("Parse Error: " ^ e);
               loop type_env eval_env)
   in
-  loop [] []
+  loop Nomad.Builtin.types Nomad.Eval.values
 
 let () =
   if Array.length Sys.argv < 2 then repl ()

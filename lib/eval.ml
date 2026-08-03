@@ -9,12 +9,19 @@ type value =
   | VString of string
   | VUnit
   | VList of value list
+  | VArray of value array
   | VTuple of value list
   | VClos of ident * expr * env
   | VRecClos of ident * ident * expr * env
   | VCon of ident * int * value list
+  | VBuiltin of ident * int * value list
 
 and env = (ident * value) list
+
+let values =
+  List.map
+    (fun (name, n, _) -> (name, VBuiltin (name, n, [])))
+    Builtin.signatures
 
 let rec match_pattern pat v =
   match (pat, v) with
@@ -67,6 +74,20 @@ let rec eval env e =
       | VInt lo, VInt hi ->
           VList (List.init (max 0 (hi - lo + 1)) (fun i -> VInt (lo + i)))
       | _ -> raise (EvaluationError "A range needs two integers"))
+  | Index (arr, i) -> (
+      match (eval env arr, eval env i) with
+      | VArray a, VInt i ->
+          bounds a i;
+          a.(i)
+      | _ -> raise (EvaluationError "Indexing needs an array and an integer"))
+  | Update (arr, i, v) -> (
+      match (eval env arr, eval env i) with
+      | VArray a, VInt i ->
+          bounds a i;
+          let b = Array.copy a in
+          b.(i) <- eval env v;
+          VArray b
+      | _ -> raise (EvaluationError "Indexing needs an array and an integer"))
   | Match (e, cases) -> try_match env cases (eval env e)
 
 and apply f arg =
@@ -74,7 +95,23 @@ and apply f arg =
   | VClos (id, body, env) -> eval ((id, arg) :: env) body
   | VRecClos (name, id, body, env) -> eval ((id, arg) :: (name, f) :: env) body
   | VCon (name, n, vs) -> VCon (name, n, vs @ [ arg ])
+  | VBuiltin (name, n, vs) ->
+      let vs = vs @ [ arg ] in
+      if List.length vs = n then builtin name vs else VBuiltin (name, n, vs)
   | _ -> raise (EvaluationError "Application of non-function")
+
+and bounds a i =
+  if i < 0 || i >= Array.length a then
+    raise (EvaluationError "Index out of bounds")
+
+and builtin name vs =
+  match (name, vs) with
+  | "array", [ VInt n; v ] ->
+      if n < 0 then
+        raise (EvaluationError "An array needs a length of zero or more")
+      else VArray (Array.make n v)
+  | "size", [ VArray a ] -> VInt (Array.length a)
+  | _ -> raise (EvaluationError ("Bad application of " ^ name))
 
 and rec_value env id e =
   match e with
@@ -130,8 +167,12 @@ and binop op v1 v2 =
 
 and equal v1 v2 =
   match (v1, v2) with
-  | (VClos _ | VRecClos _), _ | _, (VClos _ | VRecClos _) ->
+  | (VClos _ | VRecClos _ | VBuiltin _), _
+  | _, (VClos _ | VRecClos _ | VBuiltin _) ->
       raise (EvaluationError "Cannot compare functions")
+  | VArray a, VArray b ->
+      Array.length a = Array.length b
+      && List.for_all2 equal (Array.to_list a) (Array.to_list b)
   | VCon (n1, _, vs1), VCon (n2, _, vs2) ->
       n1 = n2
       && List.length vs1 = List.length vs2
@@ -159,10 +200,12 @@ let rec show = function
   | VString s -> "\"" ^ s ^ "\""
   | VUnit -> "()"
   | VList vs -> "[" ^ String.concat "; " (List.map show vs) ^ "]"
+  | VArray a ->
+      "[|" ^ String.concat "; " (List.map show (Array.to_list a)) ^ "|]"
   | VTuple vs -> "(" ^ String.concat ", " (List.map show vs) ^ ")"
   | VCon (name, _, []) -> name
   | VCon (name, _, vs) -> String.concat " " (name :: List.map nested vs)
-  | VClos _ | VRecClos _ -> "<fun>"
+  | VClos _ | VRecClos _ | VBuiltin _ -> "<fun>"
 
 and nested v =
   match v with VCon (_, _, _ :: _) -> "(" ^ show v ^ ")" | _ -> show v
@@ -170,7 +213,8 @@ and nested v =
 let show_val ty v =
   match v with
   | VClos _ | VRecClos _ -> "<fun> : " ^ display_typ ty
-  | VCon (_, n, vs) when List.length vs < n -> "<fun> : " ^ display_typ ty
+  | (VCon (_, n, vs) | VBuiltin (_, n, vs)) when List.length vs < n ->
+      "<fun> : " ^ display_typ ty
   | _ -> show v
 
 let run_program stmts =
@@ -178,7 +222,7 @@ let run_program stmts =
     let env, v = eval_stmt env stmt in
     (env, match stmt with TypeStmt _ -> vs | _ -> v :: vs)
   in
-  List.rev (snd (List.fold_left step ([], []) stmts))
+  List.rev (snd (List.fold_left step (values, []) stmts))
 
 let eval_program types stmts =
   List.iter2 (fun t v -> print_endline (show_val t v)) types (run_program stmts)

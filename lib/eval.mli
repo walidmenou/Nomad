@@ -8,20 +8,27 @@ type value =
   | VString of string
   | VUnit
   | VList of value list
+  | VArray of value array
   | VTuple of value list
   | VClos of ident * expr * env
   | VRecClos of ident * ident * expr * env
   | VCon of ident * int * value list
+  | VBuiltin of ident * int * value list
       (** What an expression evaluates to. A closure carries the environment its
           function was written in, so a free variable in the body means what it
           meant there rather than what it means at the call. A recursive closure
           also carries the name the function calls itself by, which is how
           recursion works without mutation. A constructor carries its name, the
           number of arguments it takes and the ones it has been given, so it
-          behaves as a function until it has them all *)
+          behaves as a function until it has them all, and a built-in collects
+          its arguments the same way before it runs *)
 
 and env = (ident * value) list
 (** The value each identifier in scope stands for *)
+
+val values : env
+(** The value environment a program starts in, holding one value for each of
+    [Builtin.signatures] *)
 
 val eval : env -> expr -> value
 (** The value of an expression, raising [EvaluationError] if it has none.

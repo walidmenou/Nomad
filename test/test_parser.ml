@@ -195,6 +195,23 @@ let test_statement () =
     ();
   check_parse statement "1 + 1" (ExprStmt (BinOp (Int 1, Add, Int 1))) ()
 
+let test_index_expr () =
+  check_parse expr "a[1]" (Index (Var "a", Int 1)) ();
+  check_parse expr "a[i][j]" (Index (Index (Var "a", Var "i"), Var "j")) ();
+  check_parse expr "(f x)[0]" (Index (App (Var "f", Var "x"), Int 0)) ();
+  check_parse expr "a[i + 1]" (Index (Var "a", BinOp (Var "i", Add, Int 1))) ();
+  check_parse expr "f a[0]" (App (Var "f", Index (Var "a", Int 0))) ();
+  check_parse expr "f [1]" (App (Var "f", List [ Int 1 ])) ()
+
+let test_update_expr () =
+  check_parse expr "a[1] := 2" (Update (Var "a", Int 1, Int 2)) ();
+  check_parse expr "a[i][j] := v"
+    (Update (Index (Var "a", Var "i"), Var "j", Var "v"))
+    ();
+  check_parse expr "a[0] := b[1]"
+    (Update (Var "a", Int 0, Index (Var "b", Int 1)))
+    ()
+
 let test_type_stmt () =
   check_parse statement "type shape = Circle int | Rect int int"
     (TypeStmt
@@ -263,6 +280,8 @@ let tests =
     ("match", `Quick, test_match_expr);
     ("patterns", `Quick, test_pattern);
     ("statements", `Quick, test_statement);
+    ("indexing", `Quick, test_index_expr);
+    ("update", `Quick, test_update_expr);
     ("type declarations", `Quick, test_type_stmt);
     ("type expressions", `Quick, test_type_expr);
     ("programs", `Quick, test_program);

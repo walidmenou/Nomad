@@ -6,15 +6,17 @@ type env = (ident * scheme) list
 
 let counter = ref 0
 
-let fresh () =
+let fresh_var () =
   let v = !counter in
   counter := v + 1;
-  TVar v
+  v
+
+let fresh () = TVar (fresh_var ())
 
 let rec vars = function
   | TVar v -> [ v ]
   | TArrow (t1, t2) -> vars t1 @ vars t2
-  | TList t -> vars t
+  | TList t | TArray t -> vars t
   | TTuple ts | TCon (_, ts) -> List.concat_map vars ts
   | _ -> []
 
@@ -182,6 +184,22 @@ let rec infer_w env e =
       in
       let s, t = step s env body in
       (s, TList (Subst.apply s t))
+  | Index (arr, i) ->
+      let t_elem = fresh () in
+      let s, t_arr = infer_w env arr in
+      let s = Subst.compose (Subst.unify t_arr (TArray t_elem)) s in
+      let s, t_i = step s env i in
+      let s = Subst.compose (Subst.unify t_i TInt) s in
+      (s, Subst.apply s t_elem)
+  | Update (arr, i, v) ->
+      let t_elem = fresh () in
+      let s, t_arr = infer_w env arr in
+      let s = Subst.compose (Subst.unify t_arr (TArray t_elem)) s in
+      let s, t_i = step s env i in
+      let s = Subst.compose (Subst.unify t_i TInt) s in
+      let s, t_v = step s env v in
+      let s = Subst.compose (Subst.unify (Subst.apply s t_elem) t_v) s in
+      (s, TArray (Subst.apply s t_elem))
   | Range (e1, e2) ->
       let s1, t1 = infer_w env e1 in
       let s = Subst.compose (Subst.unify t1 TInt) s1 in
