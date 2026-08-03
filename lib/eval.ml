@@ -84,9 +84,8 @@ let rec eval env e =
       match (eval env arr, eval env i) with
       | VArray a, VInt i ->
           bounds a i;
-          let b = Array.copy a in
-          b.(i) <- eval env v;
-          VArray b
+          a.(i) <- eval env v;
+          VArray a
       | _ -> raise (EvaluationError "Indexing needs an array and an integer"))
   | Match (e, cases) -> try_match env cases (eval env e)
 
@@ -112,6 +111,7 @@ and builtin name vs =
       else VArray (Array.make n v)
   | "size", [ VArray a ] -> VInt (Array.length a)
   | "copy", [ VArray a ] -> VArray (Array.copy a)
+  | "from_list", [ VList vs ] -> VArray (Array.of_list vs)
   | _ -> raise (EvaluationError ("Bad application of " ^ name))
 
 and rec_value env id e =
@@ -218,12 +218,16 @@ let show_val ty v =
       "<fun> : " ^ display_typ ty
   | _ -> show v
 
-let run_program stmts =
-  let step (env, vs) stmt =
+let show_program types stmts =
+  let step (env, out, ts) stmt =
     let env, v = eval_stmt env stmt in
-    (env, match stmt with TypeStmt _ -> vs | _ -> v :: vs)
+    match (stmt, ts) with
+    | TypeStmt _, _ -> (env, out, ts)
+    | _, t :: rest -> (env, show_val t v :: out, rest)
+    | _, [] -> (env, out, [])
   in
-  List.rev (snd (List.fold_left step (values, []) stmts))
+  let _, out, _ = List.fold_left step (values, [], types) stmts in
+  List.rev out
 
 let eval_program types stmts =
-  List.iter2 (fun t v -> print_endline (show_val t v)) types (run_program stmts)
+  List.iter print_endline (show_program types stmts)

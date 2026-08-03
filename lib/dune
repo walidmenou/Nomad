@@ -1,4 +1,16 @@
 (library
  (name nomad)
  (public_name nomad)
- (modules adt ast builtin parser eval util subst infer check pat pretty))
+ (modules
+  adt
+  ast
+  borrow
+  builtin
+  parser
+  eval
+  util
+  subst
+  infer
+  check
+  pat
+  pretty))

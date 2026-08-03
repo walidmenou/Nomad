@@ -42,6 +42,9 @@ let repl () =
                   loop type_env eval_env
               | EvaluationError e ->
                   print_endline ("Evaluation Error: " ^ e);
+                  loop type_env eval_env
+              | Nomad.Borrow.BorrowError e ->
+                  print_endline ("Borrow Error: " ^ e);
                   loop type_env eval_env)
           | Error e ->
               print_endline ("Parse Error: " ^ e);
@@ -61,5 +64,6 @@ let () =
     | Ok stmts -> (
         try eval_program (check_program stmts) stmts with
         | TypeError e -> print_endline ("Type Error: " ^ e)
-        | EvaluationError e -> print_endline ("Evaluation Error: " ^ e))
+        | EvaluationError e -> print_endline ("Evaluation Error: " ^ e)
+        | Nomad.Borrow.BorrowError e -> print_endline ("Borrow Error: " ^ e))
     | Error e -> print_endline ("Parse Error: " ^ e)

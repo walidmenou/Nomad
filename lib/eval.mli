@@ -53,9 +53,11 @@ val show_val : typ -> value -> string
     the same way. The type comes from the checker, since the evaluator does not
     compute one *)
 
-val run_program : program -> value list
-(** The value each statement of a program produces, in order, without printing
-    anything. A type declaration contributes nothing *)
+val show_program : typ list -> program -> string list
+(** What each statement of a program prints, in order, without printing it. A
+    type declaration contributes nothing. Each value is printed as its statement
+    runs rather than at the end, since an array updated later is the same array
+*)
 
 val eval_program : typ list -> program -> unit
 (** Runs every statement of a program in order and prints each value against the

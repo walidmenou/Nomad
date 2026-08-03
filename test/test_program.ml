@@ -5,7 +5,13 @@ let run src =
   | Error e -> Alcotest.fail ("Parse error: " ^ e)
   | Ok stmts ->
       let types = Check.check_program stmts in
-      List.map2 Eval.show_val types (Eval.run_program stmts)
+      Eval.show_program types stmts
+
+let check_borrow_error src expected () =
+  match run src with
+  | _ -> Alcotest.fail "expected a borrow error"
+  | exception Borrow.BorrowError e ->
+      Alcotest.(check string) "error message" expected e
 
 let check_run src expected () =
   Alcotest.(check (list string)) "output" expected (run src)
@@ -210,15 +216,20 @@ let test_arrays () =
     ()
 
 let test_array_values () =
-  check_run "let a = array 3 0\nlet b = a[1] := 9\nlet same = a = b"
-    [ "[|0; 0; 0|]"; "[|0; 9; 0|]"; "false" ]
+  check_borrow_error "let a = array 3 0\nlet b = a[1] := 9\nlet old = a[1]"
+    "a was already given to an update" ();
+  check_borrow_error "let a = array 3 0\nlet b = a[1] := 9\nlet c = a[0] := 1"
+    "a was already given to an update" ();
+  check_run "let a = array 3 0\nlet b = a[1] := 9\nlet c = b[1] := 8"
+    [ "[|0; 0; 0|]"; "[|0; 9; 0|]"; "[|0; 8; 0|]" ]
     ();
-  check_run "let a = array 3 0\nlet b = a[1] := 9\nlet old = a[1]"
-    [ "[|0; 0; 0|]"; "[|0; 9; 0|]"; "0" ]
+  check_type_error "let a = array 2 (array 2 1)"
+    "An array cannot be stored inside another structure yet" ();
+  check_type_error "let a = array 2 0\nlet l = [a]"
+    "An array cannot be stored inside another structure yet" ();
+  check_run "let a = from_list [1; 2; 3]\nlet b = a[1]" [ "[|1; 2; 3|]"; "2" ]
     ();
-  check_run "let a = array 2 (array 2 1)\nlet b = a[0] := (a[0][1] := 9)"
-    [ "[|[|1; 1|]; [|1; 1|]|]"; "[|[|1; 9|]; [|1; 1|]|]" ]
-    ();
+  check_run "let a = from_list [x * x | x <- [1..4]]" [ "[|1; 4; 9; 16|]" ] ();
   check_run "let a = array 2 0\nlet b = copy a\nlet c = b[0] := 5\nlet d = a[0]"
     [ "[|0; 0|]"; "[|0; 0|]"; "[|5; 0|]"; "0" ]
     ();
@@ -243,6 +254,35 @@ let test_array_errors () =
   check_type_error "let a = array 3 0\nlet b = a[true]"
     "Type mismatch: bool and int" ();
   check_type_fails "let a = [1; 2]\nlet b = a[0]" ()
+
+let test_borrow () =
+  check_borrow_error "let a = array 3 0\nlet b = a[0] := 1\nlet c = a[0]"
+    "a was already given to an update" ();
+  check_borrow_error
+    "let a = array 3 0\nlet bump x = x[0] := 1\nlet b = bump a\nlet c = a[0]"
+    "a was already given to bump" ();
+  check_borrow_error
+    "let a = array 3 0\nlet b = if true then (a[0] := 1) else a\nlet c = a[0]"
+    "a was already given to an update" ();
+  check_run "let a = array 3 0\nlet bump x = x[0] := 1\nlet b = bump a"
+    [ "[|0; 0; 0|]"; "<fun> : int array -> int array"; "[|1; 0; 0|]" ]
+    ();
+  check_run
+    "let a = array 3 0\nlet b = copy a\nlet c = b[0] := 1\nlet d = a[0] + c[0]"
+    [ "[|0; 0; 0|]"; "[|0; 0; 0|]"; "[|1; 0; 0|]"; "1" ]
+    ()
+
+let test_borrow_restrictions () =
+  check_borrow_error "let a = array 3 0\nlet bump x = x[0] := 1\nlet f = bump"
+    "bump updates an array it is given, so it has to be called with all of its \
+     arguments"
+    ();
+  check_borrow_error "let a = array 3 0\nlet g = fun x -> a[0] := x"
+    "a is updated inside a function but bound outside it" ();
+  check_borrow_error "let a = array 3 0\nlet l = [a[0] := i | i <- [1; 2]]"
+    "a comprehension cannot update an array, since its body runs once per \
+     element"
+    ()
 
 let test_pattern_binding_types () =
   check_run "let tl l = match l with [] -> [] | x :: xs -> xs"
@@ -743,6 +783,8 @@ let tests =
     ("array values", `Quick, test_array_values);
     ("array types", `Quick, test_array_types);
     ("array errors", `Quick, test_array_errors);
+    ("borrow", `Quick, test_borrow);
+    ("borrow restrictions", `Quick, test_borrow_restrictions);
     ("pattern binding types", `Quick, test_pattern_binding_types);
     ("declarations", `Quick, test_declarations);
     ("declaration types", `Quick, test_declaration_types);

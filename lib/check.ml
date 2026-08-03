@@ -40,6 +40,32 @@ let declare name params cons =
       (c, Forall (ids, List.fold_right (fun t acc -> TArrow (t, acc)) ts result)))
     cons
 
+let rec holds_array t =
+  match t with
+  | TArray _ -> true
+  | TList t -> holds_array t
+  | TTuple ts | TCon (_, ts) -> List.exists holds_array ts
+  | _ -> false
+
+let rec flat t =
+  match t with
+  | TArray e | TList e ->
+      if holds_array e then
+        raise
+          (Subst.TypeError
+             "An array cannot be stored inside another structure yet")
+      else flat e
+  | TTuple ts | TCon (_, ts) ->
+      if List.exists holds_array ts then
+        raise
+          (Subst.TypeError
+             "An array cannot be stored inside another structure yet")
+      else List.iter flat ts
+  | TArrow (a, b) ->
+      flat a;
+      flat b
+  | _ -> ()
+
 let check_stmt env stmt =
   match stmt with
   | TypeStmt (name, params, cons) -> (declare name params cons @ env, TUnit)
@@ -58,8 +84,10 @@ let check_stmt env stmt =
 
 let check_program stmts =
   Adt.reset ();
+  Borrow.check_program stmts;
   let step (env, ts) stmt =
     let env, t = check_stmt env stmt in
+    flat t;
     (env, match stmt with TypeStmt _ -> ts | _ -> t :: ts)
   in
   List.rev (snd (List.fold_left step (Builtin.types, []) stmts))
