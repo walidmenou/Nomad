@@ -8,6 +8,7 @@ let signatures =
   [
     ("array", 2, arrow [ TInt; a ] (TArray a));
     ("size", 1, arrow [ TArray a ] TInt);
+    ("copy", 1, arrow [ TArray a ] (TArray a));
   ]
 
 let types =

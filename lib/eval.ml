@@ -111,6 +111,7 @@ and builtin name vs =
         raise (EvaluationError "An array needs a length of zero or more")
       else VArray (Array.make n v)
   | "size", [ VArray a ] -> VInt (Array.length a)
+  | "copy", [ VArray a ] -> VArray (Array.copy a)
   | _ -> raise (EvaluationError ("Bad application of " ^ name))
 
 and rec_value env id e =

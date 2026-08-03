@@ -218,7 +218,11 @@ let test_array_values () =
     ();
   check_run "let a = array 2 (array 2 1)\nlet b = a[0] := (a[0][1] := 9)"
     [ "[|[|1; 1|]; [|1; 1|]|]"; "[|[|1; 9|]; [|1; 1|]|]" ]
-    ()
+    ();
+  check_run "let a = array 2 0\nlet b = copy a\nlet c = b[0] := 5\nlet d = a[0]"
+    [ "[|0; 0|]"; "[|0; 0|]"; "[|5; 0|]"; "0" ]
+    ();
+  check_run "let d = copy" [ "<fun> : 'a array -> 'a array" ] ()
 
 let test_array_types () =
   check_run "let make n = array n 0" [ "<fun> : int -> int array" ] ();
