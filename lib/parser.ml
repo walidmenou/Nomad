@@ -4,7 +4,7 @@ open Ast
 type 'a t = char list -> ('a * char list) option
 
 let keywords =
-  [ "let"; "in"; "fun"; "if"; "then"; "else"; "match"; "with"; "type"; "fold" ]
+  [ "let"; "in"; "fun"; "if"; "then"; "else"; "match"; "with"; "type" ]
 
 let return x = fun input -> Some (x, input)
 let none = fun _ -> None
@@ -288,7 +288,7 @@ and atom_pat input =
 
 let rec expr input =
   (if_expr <|> fun_expr <|> let_rec_expr <|> let_expr <|> match_expr
- <|> fold_expr <|> update_expr <|> or_expr)
+ <|> update_expr <|> or_expr)
     input
 
 and or_expr input = chain_left orop and_expr input
@@ -358,17 +358,10 @@ and indexed input =
   ( name_body lower
   |*> (fun x -> return (Var x))
   <|> between lparen (char ')') expr
+  <|> between lbracket (char ']') (comp_body <|> range_body <|> list_body)
   |*> fun base ->
     some (between (char '[') rbracket expr) |*> fun idxs ->
     return (List.fold_left (fun acc i -> Index (acc, i)) base idxs) )
-    input
-
-and fold_expr input =
-  ( keyword "fold" |>> ident |*> fun acc ->
-    keyword "=" |>> expr |*> fun init ->
-    keyword "|" |>> sepby comma qualifier |*> fun qs ->
-    arrow |>> expr |*> fun body ->
-    if qs = [] then none else return (Fold (acc, init, qs, body)) )
     input
 
 and update_expr input =

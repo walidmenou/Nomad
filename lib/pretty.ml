@@ -96,10 +96,6 @@ let rec string_of_expr = function
         match st with Some e -> ", " ^ string_of_expr e | None -> ""
       in
       "[" ^ string_of_expr e1 ^ mid ^ ".." ^ string_of_expr e2 ^ "]"
-  | Fold (x, init, qs, body) ->
-      "fold " ^ x ^ " = " ^ string_of_expr init ^ " | "
-      ^ String.concat ", " (List.map string_of_qual qs)
-      ^ " -> " ^ string_of_expr body
   | Index (a, i) -> atom a ^ "[" ^ string_of_expr i ^ "]"
   | Update (a, i, v) ->
       atom a ^ "[" ^ string_of_expr i ^ "] := " ^ string_of_expr v

@@ -6,6 +6,6 @@ let edges =
    (2, 3, -3); (2, 4, 9); (3, 1, -2); (4, 0, 2); (4, 3, 7)]
 
 let result =
-  fold d = from_list [if v = 0 then 0 else inf | v <- [0..n - 1]]
-  | k <- [1..n - 1], (a, b, w) <- edges, d[a] < inf, d[a] + w < d[b]
-  -> d[b] := d[a] + w
+  let d = from_list [if v = 0 then 0 else inf | v <- [0..n - 1]] in
+  [d[b] := d[a] + w
+   | k <- [1..n - 1], (a, b, w) <- edges, d[a] < inf, d[a] + w < d[b]]

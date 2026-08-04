@@ -39,7 +39,11 @@ val eval : env -> expr -> value
     leftmost generator is the outer loop and a later qualifier sees every name
     an earlier one bound. A generator pattern that a value does not match skips
     that value rather than failing. The language is strict, so the whole result
-    is built before anything else happens *)
+    is built before anything else happens.
+
+    A comprehension whose body is an update performs the updates in that order
+    and produces the array rather than a list of it, which is how a table is
+    filled in one expression *)
 
 val eval_stmt : env -> statement -> env * value
 (** Evaluates a statement and returns the environment the next one runs in,

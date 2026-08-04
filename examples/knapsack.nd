@@ -1,8 +1,8 @@
 let max a b = if a > b then a else b
 
 let knapsack cap items =
-  (fold t = array (cap + 1) 0
-   | (wt, vl) <- items, w <- [cap, cap - 1..wt]
-   -> t[w] := max t[w] (t[w - wt] + vl))[cap]
+  let t = array (cap + 1) 0 in
+  [t[w] := max t[w] (t[w - wt] + vl)
+   | (wt, vl) <- items, w <- [cap, cap - 1..wt]][cap]
 
 let result = knapsack 5 [(2, 3); (3, 4); (4, 5); (5, 6)]

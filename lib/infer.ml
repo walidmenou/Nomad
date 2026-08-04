@@ -178,12 +178,13 @@ let rec infer_w env e =
           ([], []) exprs
       in
       (s, TTuple (List.rev_map (Subst.apply s) ts))
-  | Comp (body, qs) ->
+  | Comp (body, qs) -> (
       let s, env =
         List.fold_left (fun (s, env) q -> infer_qual s env q) ([], env) qs
       in
       let s, t = step s env body in
-      (s, TList (Subst.apply s t))
+      let t = Subst.apply s t in
+      (s, match body with Update _ -> t | _ -> TList t))
   | Index (arr, i) ->
       let t_elem = fresh () in
       let s, t_arr = infer_w env arr in
@@ -208,15 +209,6 @@ let rec infer_w env e =
       let s = ints [] e1 in
       let s = match st with Some e -> ints s e | None -> s in
       (ints s e2, TList TInt)
-  | Fold (x, init, qs, body) ->
-      let s, t_acc = infer_w env init in
-      let env = (x, mono (Subst.apply s t_acc)) :: apply_env s env in
-      let s, env =
-        List.fold_left (fun (s, env) q -> infer_qual s env q) (s, env) qs
-      in
-      let s, t_body = step s env body in
-      let s = Subst.compose (Subst.unify (Subst.apply s t_acc) t_body) s in
-      (s, Subst.apply s t_acc)
   | Match (e, cases) ->
       let s, t_e = infer_w env e in
       let t_ret = fresh () in

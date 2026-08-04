@@ -212,31 +212,44 @@ let test_stepped_range () =
   check_run "let a = [3, 2..3]" [ "[3]" ] ();
   check_eval_error "let a = [1, 1..5]" "A range cannot stand still" ()
 
-let test_fold () =
-  check_run "let s = fold t = 0 | x <- [1..10] -> t + x" [ "55" ] ();
-  check_run "let s = fold t = 1 | x <- [1..5] -> t * x" [ "120" ] ();
-  check_run "let s = fold t = 0 | x <- [1..10], x % 2 = 0 -> t + x" [ "30" ] ();
-  check_run "let s = fold t = [] | x <- [1..3] -> x :: t" [ "[3; 2; 1]" ] ();
-  check_run "let s = fold t = 0 | x <- [1; 2], y <- [10; 20] -> t + x * y"
-    [ "90" ] ();
-  check_run "let s = fold t = 0 | x <- [1..3], let y = x * x -> t + y" [ "14" ]
+let test_update_comprehension () =
+  check_run "let a = array 3 0\nlet b = [a[i] := i * i | i <- [0..2]]"
+    [ "[|0; 0; 0|]"; "[|0; 1; 4|]" ]
     ();
-  check_run "let n = 4\nlet s = fold t = 0 | x <- [1..n], t < 5 -> t + x"
-    [ "4"; "6" ] ()
+  check_run "let a = array 4 0\nlet b = [a[i] := i | i <- [3, 2..0]][0]"
+    [ "[|0; 0; 0; 0|]"; "0" ] ();
+  check_run "let a = array 5 0\nlet b = [a[i] := 1 | i <- [0..4], i % 2 = 0]"
+    [ "[|0; 0; 0; 0; 0|]"; "[|1; 0; 1; 0; 1|]" ]
+    ();
+  check_run
+    "let a = array 3 0\nlet b = [a[i] := v | i <- [0..2], let v = i + 10]"
+    [ "[|0; 0; 0|]"; "[|10; 11; 12|]" ]
+    ();
+  check_run "let a = array 2 0\nlet b = [a[i] := i | i <- []]"
+    [ "[|0; 0|]"; "[|0; 0|]" ] ();
+  check_run "let a = array 3 0\nlet b = [a[i] := i | i <- [0..2]]\nlet c = b[2]"
+    [ "[|0; 0; 0|]"; "[|0; 1; 2|]"; "2" ]
+    ()
 
-let test_fold_arrays () =
-  check_run "let a = fold t = array 3 0 | i <- [0..2] -> t[i] := i * i"
-    [ "[|0; 1; 4|]" ] ();
-  check_run "let a = (fold t = array 4 0 | i <- [3, 2..0] -> t[i] := i)[0]"
-    [ "0" ] ();
-  check_borrow_error
-    "let a = array 3 0\nlet s = fold t = 0 | i <- [0..2] -> t + (a[i] := 1)[i]"
-    "a is updated inside a fold but bound outside it" ();
+let test_comprehension_still_collects () =
+  check_run "let a = [x * 2 | x <- [1..3]]" [ "[2; 4; 6]" ] ();
+  check_run "let a = array 3 7\nlet b = [a[i] | i <- [0..2]]"
+    [ "[|7; 7; 7|]"; "[7; 7; 7]" ]
+    ()
+
+let test_update_comprehension_errors () =
   check_borrow_error
     "let a = array 3 0\n\
-     let b = fold t = a | i <- [0..2] -> t[i] := i\n\
-     let c = a[0]"
-    "a was already given to a fold" ()
+     let b = array 3 0\n\
+     let c = [a[i] := (b[i] := i)[i] | i <- [0..2]]"
+    "b is updated by a comprehension but is not the array it produces" ();
+  check_borrow_error
+    "let a = array 3 0\nlet b = [a[i] := i | i <- [0..2]]\nlet c = a[0]"
+    "a was already given to a comprehension" ();
+  check_borrow_error "let b = [t[i] := i | let t = array 3 0, i <- [0..2]]"
+    "t is bound by the comprehension that updates it, so there is nothing for \
+     it to produce"
+    ()
 
 let test_arrays () =
   check_run "let a = array 3 0" [ "[|0; 0; 0|]" ] ();
@@ -312,11 +325,7 @@ let test_borrow_restrictions () =
      arguments"
     ();
   check_borrow_error "let a = array 3 0\nlet g = fun x -> a[0] := x"
-    "a is updated inside a function but bound outside it" ();
-  check_borrow_error "let a = array 3 0\nlet l = [a[0] := i | i <- [1; 2]]"
-    "a comprehension cannot update an array, since its body runs once per \
-     element"
-    ()
+    "a is updated inside a function but bound outside it" ()
 
 let test_pattern_binding_types () =
   check_run "let tl l = match l with [] -> [] | x :: xs -> xs"
@@ -822,8 +831,9 @@ let tests =
     ("tuple exhaustiveness", `Quick, test_tuple_exhaustiveness);
     ("parenthesised patterns", `Quick, test_parenthesised_patterns);
     ("stepped range", `Quick, test_stepped_range);
-    ("fold", `Quick, test_fold);
-    ("fold arrays", `Quick, test_fold_arrays);
+    ("update comprehension", `Quick, test_update_comprehension);
+    ("comprehension still collects", `Quick, test_comprehension_still_collects);
+    ("update comprehension errors", `Quick, test_update_comprehension_errors);
     ("arrays", `Quick, test_arrays);
     ("array values", `Quick, test_array_values);
     ("array types", `Quick, test_array_types);

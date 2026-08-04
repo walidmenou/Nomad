@@ -15,5 +15,9 @@ val check_program : program -> unit
     than written down, so types are unchanged. Two restrictions keep that sound.
     A function that writes to an argument has to be called with all of its
     arguments rather than passed around as a value, since nothing then knows
-    what it does. And neither a function written inline nor a comprehension may
-    write to an array, since both may run more than once *)
+    what it does. And a function written inline may not write to an array, since
+    it may run more than once.
+
+    A comprehension whose body is an update is the exception, because it is what
+    produces the array. It may write to exactly one array, which has to be bound
+    outside it, and it gives that array away *)

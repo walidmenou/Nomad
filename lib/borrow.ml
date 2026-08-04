@@ -61,7 +61,7 @@ let rec walk sigs dead e =
       dead
   | Let (x, e1, e2) ->
       let sigs, dead = local sigs dead x e1 in
-      walk sigs dead e2
+      forget (walk sigs dead e2) x
   | Rec (f, e1, e2) ->
       let sigs = (f, recursive sigs f e1) :: List.remove_assoc f sigs in
       walk sigs (List.remove_assoc f dead) e2
@@ -70,33 +70,41 @@ let rec walk sigs dead e =
       let dead = walk sigs dead a in
       let dead = match st with Some e -> walk sigs dead e | None -> dead in
       walk sigs dead b
-  | Fold (x, init, qs, body) ->
-      let dead = walk sigs dead init in
-      let bound = x :: List.concat_map qual_names qs in
-      let inner = List.fold_left (qual sigs) [] qs in
-      let inner = walk sigs inner body in
-      List.iter
-        (fun (y, _) ->
-          if not (List.mem y bound) then
-            raise
-              (BorrowError (y ^ " is updated inside a fold but bound outside it")))
-        inner;
-      consume dead init "a fold"
   | Match (e, cases) ->
       let dead = walk sigs dead e in
       List.fold_left
         (fun acc (p, body) ->
-          join acc (walk sigs (List.fold_left forget dead (names p)) body))
+          let ns = names p in
+          let out = walk sigs (List.fold_left forget dead ns) body in
+          join acc (List.fold_left forget out ns))
         [] cases
-  | Comp (body, qs) ->
-      let inner = List.fold_left (qual sigs) dead qs in
+  | Comp (body, qs) -> (
+      let target =
+        match body with Update (arr, _, _) -> base arr | _ -> None
+      in
+      let inner = List.fold_left (qual sigs) [] qs in
       let inner = walk sigs inner body in
-      if List.length inner > List.length dead then
-        raise
-          (BorrowError
-             "a comprehension cannot update an array, since its body runs once \
-              per element");
-      dead
+      List.iter
+        (fun (y, _) ->
+          if Some y <> target then
+            raise
+              (BorrowError
+                 (y
+                ^ " is updated by a comprehension but is not the array it \
+                   produces")))
+        inner;
+      let dead = List.fold_left (qual sigs) dead qs in
+      (match target with
+      | Some x when List.mem x (List.concat_map qual_names qs) ->
+          raise
+            (BorrowError
+               (x
+              ^ " is bound by the comprehension that updates it, so there is \
+                 nothing for it to produce"))
+      | _ -> ());
+      match body with
+      | Update (arr, _, _) -> consume dead arr "a comprehension"
+      | _ -> dead)
 
 and qual sigs dead q =
   match q with
