@@ -1,0 +1,32 @@
+let n = 10
+
+let rec root p x = if p[x] = x then x else root p (p[x])
+
+let rec compress p x r =
+  if p[x] = x then p
+  else
+    let up = p[x] in
+    compress (p[x] := r) up r
+
+let unite p a b =
+  let ra = root p a in
+  let rb = root p b in
+  if ra = rb then p else p[ra] := rb
+
+let rec join_all p es =
+  match es with
+  | [] -> p
+  | (a, b) :: rest -> join_all (unite p a b) rest
+
+let flatten p x = compress p x (root p x)
+
+let rec flatten_all p xs =
+  match xs with
+  | [] -> p
+  | x :: rest -> flatten_all (flatten p x) rest
+
+let edges = [(0, 1); (1, 2); (3, 4); (5, 6); (6, 7); (4, 5)]
+
+let linked = join_all (from_list [i | i <- [0..n - 1]]) edges
+
+let result = flatten_all linked [0..n - 1]

@@ -1,0 +1,14 @@
+let n = 100
+
+let rec mark c p i =
+  if i > n then c
+  else mark (c[i] := true) p (i + p)
+
+let rec sift c p =
+  if p * p > n then c
+  else if c[p] then sift c (p + 1)
+  else sift (mark c p (p * p)) (p + 1)
+
+let result =
+  let composite = sift (array (n + 1) false) 2 in
+  [p | p <- [2..n], composite[p] = false]

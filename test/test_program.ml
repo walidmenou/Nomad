@@ -729,7 +729,15 @@ let test_algorithm_examples () =
     (last (read_file "../examples/bellman_ford.nd"));
   Alcotest.(check string)
     "trie" "[true; false; true; false; true]"
-    (last (read_file "../examples/trie.nd"))
+    (last (read_file "../examples/trie.nd"));
+  Alcotest.(check string)
+    "sieve"
+    "[2; 3; 5; 7; 11; 13; 17; 19; 23; 29; 31; 37; 41; 43; 47; 53; 59; 61; 67; \
+     71; 73; 79; 83; 89; 97]"
+    (last (read_file "../examples/sieve.nd"));
+  Alcotest.(check string)
+    "union find" "[|2; 2; 2; 7; 7; 7; 7; 7; 8; 9|]"
+    (last (read_file "../examples/union_find.nd"))
 
 let test_examples () =
   check_run
