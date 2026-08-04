@@ -49,6 +49,11 @@ and all ps vs =
       | _ -> None)
     (Some []) ps vs
 
+let rec lookup env x =
+  match env with
+  | (y, v) :: rest -> if String.equal x y then v else lookup rest x
+  | [] -> raise (EvaluationError ("Unbound Variable: " ^ x))
+
 let rec eval env e =
   match e with
   | Int n -> VInt n
@@ -56,9 +61,7 @@ let rec eval env e =
   | String s -> VString s
   | Unit -> VUnit
   | Fun (id, body) -> VClos (id, body, env)
-  | Var x -> (
-      try List.assoc x env
-      with Not_found -> raise (EvaluationError ("Unbound Variable: " ^ x)))
+  | Var x -> lookup env x
   | BinOp (e1, And, e2) -> if truth env e1 then eval env e2 else VBool false
   | BinOp (e1, Or, e2) -> if truth env e1 then VBool true else eval env e2
   | BinOp (e1, op, e2) -> binop op (eval env e1) (eval env e2)
