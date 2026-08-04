@@ -10,6 +10,9 @@ let signatures =
     ("size", 1, arrow [ TArray a ] TInt);
     ("copy", 1, arrow [ TArray a ] (TArray a));
     ("from_list", 1, arrow [ TList a ] (TArray a));
+    ("grid", 3, arrow [ TInt; TInt; a ] (TGrid a));
+    ("rows", 1, arrow [ TGrid a ] TInt);
+    ("cols", 1, arrow [ TGrid a ] TInt);
   ]
 
 let types =

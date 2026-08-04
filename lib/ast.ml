@@ -9,6 +9,7 @@ type typ =
   | TArrow of typ * typ
   | TList of typ
   | TArray of typ
+  | TGrid of typ
   | TTuple of typ list
   | TCon of ident * typ list
   | TVar of int

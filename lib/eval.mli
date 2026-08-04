@@ -9,6 +9,7 @@ type value =
   | VUnit
   | VList of value list
   | VArray of value array
+  | VGrid of int * value array
   | VTuple of value list
   | VClos of ident * expr * env
   | VRecClos of ident * ident * expr * env
@@ -21,7 +22,9 @@ type value =
           recursion works without mutation. A constructor carries its name, the
           number of arguments it takes and the ones it has been given, so it
           behaves as a function until it has them all, and a built-in collects
-          its arguments the same way before it runs *)
+          its arguments the same way before it runs. A grid holds its cells in
+          one block and remembers how wide a row is, so [g[i][j]] is arithmetic
+          rather than a second array *)
 
 and env = (ident * value) list
 (** The value each identifier in scope stands for *)

@@ -16,7 +16,7 @@ let fresh () = TVar (fresh_var ())
 let rec vars = function
   | TVar v -> [ v ]
   | TArrow (t1, t2) -> vars t1 @ vars t2
-  | TList t | TArray t -> vars t
+  | TList t | TArray t | TGrid t -> vars t
   | TTuple ts | TCon (_, ts) -> List.concat_map vars ts
   | _ -> []
 
@@ -185,6 +185,14 @@ let rec infer_w env e =
       let s, t = step s env body in
       let t = Subst.apply s t in
       (s, match body with Update _ -> t | _ -> TList t))
+  | Index (Index (g, i), j) ->
+      let s, t = grid_at env g i j in
+      (s, t)
+  | Update (Index (g, i), j, v) ->
+      let s, t = grid_at env g i j in
+      let s, t_v = step s env v in
+      let s = Subst.compose (Subst.unify (Subst.apply s t) t_v) s in
+      (s, TGrid (Subst.apply s t))
   | Index (arr, i) ->
       let t_elem = fresh () in
       let s, t_arr = infer_w env arr in
@@ -228,6 +236,16 @@ let rec infer_w env e =
       if not (Pat.exhaustive (Subst.apply s t_e) (List.map fst cases)) then
         raise (Subst.TypeError "This match is not exhaustive");
       (s, Subst.apply s t_ret)
+
+and grid_at env g i j =
+  let t = fresh () in
+  let s, t_g = infer_w env g in
+  let s = Subst.compose (Subst.unify t_g (TGrid t)) s in
+  let s, t_i = step s env i in
+  let s = Subst.compose (Subst.unify t_i TInt) s in
+  let s, t_j = step s env j in
+  let s = Subst.compose (Subst.unify t_j TInt) s in
+  (s, Subst.apply s t)
 
 and infer_qual s env q =
   match q with

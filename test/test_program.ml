@@ -327,6 +327,36 @@ let test_borrow_restrictions () =
   check_borrow_error "let a = array 3 0\nlet g = fun x -> a[0] := x"
     "a is updated inside a function but bound outside it" ()
 
+let test_grids () =
+  check_run "let g = grid 2 3 0" [ "[|[|0; 0; 0|]; [|0; 0; 0|]|]" ] ();
+  check_run
+    "let g = grid 2 2 0\nlet h = g[1][0] := 7\nlet x = h[1][0] + h[0][0]"
+    [ "[|[|0; 0|]; [|0; 0|]|]"; "[|[|0; 0|]; [|7; 0|]|]"; "7" ]
+    ();
+  check_run "let g = grid 2 3 0\nlet a = rows g\nlet b = cols g"
+    [ "[|[|0; 0; 0|]; [|0; 0; 0|]|]"; "2"; "3" ]
+    ();
+  check_run "let g = grid 0 0 0\nlet a = rows g" [ "[||]"; "0" ] ();
+  check_run "let f n = grid n n 0" [ "<fun> : int -> int grid" ] ();
+  check_run
+    "let g = grid 2 2 0\n\
+     let h = [g[i][j] := i * 2 + j | i <- [0..1], j <- [0..1]]"
+    [ "[|[|0; 0|]; [|0; 0|]|]"; "[|[|0; 1|]; [|2; 3|]|]" ]
+    ()
+
+let test_grid_errors () =
+  check_eval_error "let g = grid 2 2 0\nlet x = g[2][0]" "Index out of bounds"
+    ();
+  check_eval_error "let g = grid 2 2 0\nlet x = g[0][2]" "Index out of bounds"
+    ();
+  check_eval_error "let g = grid (0 - 1) 2 0"
+    "A grid needs sides of zero or more" ();
+  check_type_fails "let g = grid 2 2 0\nlet x = g[0]" ();
+  check_type_error "let g = grid 2 2 0\nlet l = [g]"
+    "An array cannot be stored inside another structure yet" ();
+  check_borrow_error "let g = grid 2 2 0\nlet h = g[0][0] := 1\nlet x = g[0][0]"
+    "g was already given to an update" ()
+
 let test_pattern_binding_types () =
   check_run "let tl l = match l with [] -> [] | x :: xs -> xs"
     [ "<fun> : 'a list -> 'a list" ]
@@ -774,6 +804,9 @@ let test_algorithm_examples () =
     "trie" "[true; false; true; false; true]"
     (last (read_file "../examples/trie.nd"));
   Alcotest.(check string)
+    "edit" "[1; 2; 0; 2]"
+    (last (read_file "../examples/edit.nd"));
+  Alcotest.(check string)
     "sieve"
     "[2; 3; 5; 7; 11; 13; 17; 19; 23; 29; 31; 37; 41; 43; 47; 53; 59; 61; 67; \
      71; 73; 79; 83; 89; 97]"
@@ -840,6 +873,8 @@ let tests =
     ("array errors", `Quick, test_array_errors);
     ("borrow", `Quick, test_borrow);
     ("borrow restrictions", `Quick, test_borrow_restrictions);
+    ("grids", `Quick, test_grids);
+    ("grid errors", `Quick, test_grid_errors);
     ("pattern binding types", `Quick, test_pattern_binding_types);
     ("declarations", `Quick, test_declarations);
     ("declaration types", `Quick, test_declaration_types);

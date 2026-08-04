@@ -10,6 +10,7 @@ type value =
   | VUnit
   | VList of value list
   | VArray of value array
+  | VGrid of int * value array
   | VTuple of value list
   | VClos of ident * expr * env
   | VRecClos of ident * ident * expr * env
@@ -72,7 +73,7 @@ let rec eval env e =
   | List exprs -> VList (List.map (eval env) exprs)
   | Tuple exprs -> VTuple (List.map (eval env) exprs)
   | Comp ((Update (arr, _, _) as body), qs) ->
-      let target = eval env arr in
+      let target = eval env (root arr) in
       sweep env qs body;
       target
   | Comp (body, qs) -> VList (List.rev (comp env qs body []))
@@ -95,6 +96,16 @@ let rec eval env e =
             in
             VList (go lo [])
         | _ -> raise (EvaluationError "A range needs integers"))
+  | Index (Index (g, i), j) -> (
+      match (eval env g, eval env i, eval env j) with
+      | VGrid (w, cells), VInt i, VInt j -> cells.(cell w cells i j)
+      | _ -> raise (EvaluationError "A grid is indexed by two integers"))
+  | Update (Index (g, i), j, v) -> (
+      match (eval env g, eval env i, eval env j) with
+      | (VGrid (w, cells) as g), VInt i, VInt j ->
+          cells.(cell w cells i j) <- eval env v;
+          g
+      | _ -> raise (EvaluationError "A grid is indexed by two integers"))
   | Index (arr, i) -> (
       match (eval env arr, eval env i) with
       | VArray a, VInt i ->
@@ -120,6 +131,13 @@ and apply f arg =
       if List.length vs = n then builtin name vs else VBuiltin (name, n, vs)
   | _ -> raise (EvaluationError "Application of non-function")
 
+and root e = match e with Index (a, _) -> root a | _ -> e
+
+and cell w cells i j =
+  if i < 0 || j < 0 || j >= w || (i * w) + j >= Array.length cells then
+    raise (EvaluationError "Index out of bounds")
+  else (i * w) + j
+
 and bounds a i =
   if i < 0 || i >= Array.length a then
     raise (EvaluationError "Index out of bounds")
@@ -133,6 +151,13 @@ and builtin name vs =
   | "size", [ VArray a ] -> VInt (Array.length a)
   | "copy", [ VArray a ] -> VArray (Array.copy a)
   | "from_list", [ VList vs ] -> VArray (Array.of_list vs)
+  | "grid", [ VInt r; VInt c; v ] ->
+      if r < 0 || c < 0 then
+        raise (EvaluationError "A grid needs sides of zero or more")
+      else VGrid (c, Array.make (r * c) v)
+  | "rows", [ VGrid (c, cells) ] ->
+      VInt (if c = 0 then 0 else Array.length cells / c)
+  | "cols", [ VGrid (c, _) ] -> VInt c
   | _ -> raise (EvaluationError ("Bad application of " ^ name))
 
 and rec_value env id e =
@@ -208,6 +233,7 @@ and equal v1 v2 =
   | (VClos _ | VRecClos _ | VBuiltin _), _
   | _, (VClos _ | VRecClos _ | VBuiltin _) ->
       raise (EvaluationError "Cannot compare functions")
+  | VGrid (w1, a), VGrid (w2, b) -> w1 = w2 && equal (VArray a) (VArray b)
   | VArray a, VArray b ->
       Array.length a = Array.length b
       && List.for_all2 equal (Array.to_list a) (Array.to_list b)
@@ -240,6 +266,10 @@ let rec show = function
   | VList vs -> "[" ^ String.concat "; " (List.map show vs) ^ "]"
   | VArray a ->
       "[|" ^ String.concat "; " (List.map show (Array.to_list a)) ^ "|]"
+  | VGrid (w, cells) ->
+      let n = if w = 0 then 0 else Array.length cells / w in
+      let row i = show (VArray (Array.sub cells (i * w) w)) in
+      "[|" ^ String.concat "; " (List.init n row) ^ "|]"
   | VTuple vs -> "(" ^ String.concat ", " (List.map show vs) ^ ")"
   | VCon (name, _, []) -> name
   | VCon (name, _, vs) -> String.concat " " (name :: List.map nested vs)

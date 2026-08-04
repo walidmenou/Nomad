@@ -14,7 +14,8 @@ let rec convert params te =
   | TEArrow (a, b) -> TArrow (convert params a, convert params b)
   | TECon ("list", [ t ]) -> TList (convert params t)
   | TECon ("array", [ t ]) -> TArray (convert params t)
-  | TECon ((("list" | "array") as n), _) ->
+  | TECon ("grid", [ t ]) -> TGrid (convert params t)
+  | TECon ((("list" | "array" | "grid") as n), _) ->
       raise (Subst.TypeError ("Wrong number of arguments for " ^ n))
   | TECon (n, ts) -> (
       let ts = List.map (convert params) ts in
@@ -42,14 +43,14 @@ let declare name params cons =
 
 let rec holds_array t =
   match t with
-  | TArray _ -> true
+  | TArray _ | TGrid _ -> true
   | TList t -> holds_array t
   | TTuple ts | TCon (_, ts) -> List.exists holds_array ts
   | _ -> false
 
 let rec flat t =
   match t with
-  | TArray e | TList e ->
+  | TArray e | TGrid e | TList e ->
       if holds_array e then
         raise
           (Subst.TypeError

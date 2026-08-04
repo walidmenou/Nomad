@@ -8,6 +8,7 @@ let rec typ_with name = function
   | TArrow (t1, t2) -> "(" ^ typ_with name t1 ^ " -> " ^ typ_with name t2 ^ ")"
   | TList t -> typ_with name t ^ " list"
   | TArray t -> typ_with name t ^ " array"
+  | TGrid t -> typ_with name t ^ " grid"
   | TTuple ts -> "(" ^ String.concat " * " (List.map (typ_with name) ts) ^ ")"
   | TCon (n, ts) -> String.concat " " (List.map (typ_with name) ts @ [ n ])
   | TVar v -> name v
@@ -18,7 +19,7 @@ let display_typ t =
   let rec order acc = function
     | TVar v -> if List.mem v acc then acc else acc @ [ v ]
     | TArrow (t1, t2) -> order (order acc t1) t2
-    | TList t | TArray t -> order acc t
+    | TList t | TArray t | TGrid t -> order acc t
     | TTuple ts | TCon (_, ts) -> List.fold_left order acc ts
     | _ -> acc
   in
@@ -33,6 +34,7 @@ let display_typ t =
     | TArrow (t1, t2) -> arg t1 ^ " -> " ^ show t2
     | TList t -> arg t ^ " list"
     | TArray t -> arg t ^ " array"
+    | TGrid t -> arg t ^ " grid"
     | TTuple ts -> "(" ^ String.concat " * " (List.map show ts) ^ ")"
     | TCon (n, ts) -> String.concat " " (List.map arg ts @ [ n ])
     | t -> typ_with name t
