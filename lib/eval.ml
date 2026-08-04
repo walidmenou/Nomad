@@ -264,12 +264,11 @@ let rec show = function
   | VString s -> "\"" ^ s ^ "\""
   | VUnit -> "()"
   | VList vs -> "[" ^ String.concat "; " (List.map show vs) ^ "]"
-  | VArray a ->
-      "[|" ^ String.concat "; " (List.map show (Array.to_list a)) ^ "|]"
+  | VArray a -> "{" ^ String.concat "; " (List.map show (Array.to_list a)) ^ "}"
   | VGrid (w, cells) ->
       let n = if w = 0 then 0 else Array.length cells / w in
       let row i = show (VArray (Array.sub cells (i * w) w)) in
-      "[|" ^ String.concat "; " (List.init n row) ^ "|]"
+      "{" ^ String.concat "; " (List.init n row) ^ "}"
   | VTuple vs -> "(" ^ String.concat ", " (List.map show vs) ^ ")"
   | VCon (name, _, []) -> name
   | VCon (name, _, vs) -> String.concat " " (name :: List.map nested vs)

@@ -214,27 +214,27 @@ let test_stepped_range () =
 
 let test_update_comprehension () =
   check_run "let a = array 3 0\nlet b = [a[i] := i * i | i <- [0..2]]"
-    [ "[|0; 0; 0|]"; "[|0; 1; 4|]" ]
+    [ "{0; 0; 0}"; "{0; 1; 4}" ]
     ();
   check_run "let a = array 4 0\nlet b = [a[i] := i | i <- [3, 2..0]][0]"
-    [ "[|0; 0; 0; 0|]"; "0" ] ();
+    [ "{0; 0; 0; 0}"; "0" ] ();
   check_run "let a = array 5 0\nlet b = [a[i] := 1 | i <- [0..4], i % 2 = 0]"
-    [ "[|0; 0; 0; 0; 0|]"; "[|1; 0; 1; 0; 1|]" ]
+    [ "{0; 0; 0; 0; 0}"; "{1; 0; 1; 0; 1}" ]
     ();
   check_run
     "let a = array 3 0\nlet b = [a[i] := v | i <- [0..2], let v = i + 10]"
-    [ "[|0; 0; 0|]"; "[|10; 11; 12|]" ]
+    [ "{0; 0; 0}"; "{10; 11; 12}" ]
     ();
   check_run "let a = array 2 0\nlet b = [a[i] := i | i <- []]"
-    [ "[|0; 0|]"; "[|0; 0|]" ] ();
+    [ "{0; 0}"; "{0; 0}" ] ();
   check_run "let a = array 3 0\nlet b = [a[i] := i | i <- [0..2]]\nlet c = b[2]"
-    [ "[|0; 0; 0|]"; "[|0; 1; 2|]"; "2" ]
+    [ "{0; 0; 0}"; "{0; 1; 2}"; "2" ]
     ()
 
 let test_comprehension_still_collects () =
   check_run "let a = [x * 2 | x <- [1..3]]" [ "[2; 4; 6]" ] ();
   check_run "let a = array 3 7\nlet b = [a[i] | i <- [0..2]]"
-    [ "[|7; 7; 7|]"; "[7; 7; 7]" ]
+    [ "{7; 7; 7}"; "[7; 7; 7]" ]
     ()
 
 let test_update_comprehension_errors () =
@@ -252,14 +252,14 @@ let test_update_comprehension_errors () =
     ()
 
 let test_arrays () =
-  check_run "let a = array 3 0" [ "[|0; 0; 0|]" ] ();
-  check_run "let a = array 0 0" [ "[||]" ] ();
-  check_run "let a = array 3 \"s\"" [ "[|\"s\"; \"s\"; \"s\"|]" ] ();
+  check_run "let a = array 3 0" [ "{0; 0; 0}" ] ();
+  check_run "let a = array 0 0" [ "{}" ] ();
+  check_run "let a = array 3 \"s\"" [ "{\"s\"; \"s\"; \"s\"}" ] ();
   check_run "let a = array 3 0\nlet b = a[1] := 9\nlet c = size b"
-    [ "[|0; 0; 0|]"; "[|0; 9; 0|]"; "3" ]
+    [ "{0; 0; 0}"; "{0; 9; 0}"; "3" ]
     ();
   check_run "let a = array 3 0\nlet b = a[1] := 9\nlet c = b[1] + b[0]"
-    [ "[|0; 0; 0|]"; "[|0; 9; 0|]"; "9" ]
+    [ "{0; 0; 0}"; "{0; 9; 0}"; "9" ]
     ()
 
 let test_array_values () =
@@ -268,17 +268,16 @@ let test_array_values () =
   check_borrow_error "let a = array 3 0\nlet b = a[1] := 9\nlet c = a[0] := 1"
     "a was already given to an update" ();
   check_run "let a = array 3 0\nlet b = a[1] := 9\nlet c = b[1] := 8"
-    [ "[|0; 0; 0|]"; "[|0; 9; 0|]"; "[|0; 8; 0|]" ]
+    [ "{0; 0; 0}"; "{0; 9; 0}"; "{0; 8; 0}" ]
     ();
   check_type_error "let a = array 2 (array 2 1)"
     "An array cannot be stored inside another structure yet" ();
   check_type_error "let a = array 2 0\nlet l = [a]"
     "An array cannot be stored inside another structure yet" ();
-  check_run "let a = from_list [1; 2; 3]\nlet b = a[1]" [ "[|1; 2; 3|]"; "2" ]
-    ();
-  check_run "let a = from_list [x * x | x <- [1..4]]" [ "[|1; 4; 9; 16|]" ] ();
+  check_run "let a = from_list [1; 2; 3]\nlet b = a[1]" [ "{1; 2; 3}"; "2" ] ();
+  check_run "let a = from_list [x * x | x <- [1..4]]" [ "{1; 4; 9; 16}" ] ();
   check_run "let a = array 2 0\nlet b = copy a\nlet c = b[0] := 5\nlet d = a[0]"
-    [ "[|0; 0|]"; "[|0; 0|]"; "[|5; 0|]"; "0" ]
+    [ "{0; 0}"; "{0; 0}"; "{5; 0}"; "0" ]
     ();
   check_run "let d = copy" [ "<fun> : 'a array -> 'a array" ] ()
 
@@ -312,11 +311,11 @@ let test_borrow () =
     "let a = array 3 0\nlet b = if true then (a[0] := 1) else a\nlet c = a[0]"
     "a was already given to an update" ();
   check_run "let a = array 3 0\nlet bump x = x[0] := 1\nlet b = bump a"
-    [ "[|0; 0; 0|]"; "<fun> : int array -> int array"; "[|1; 0; 0|]" ]
+    [ "{0; 0; 0}"; "<fun> : int array -> int array"; "{1; 0; 0}" ]
     ();
   check_run
     "let a = array 3 0\nlet b = copy a\nlet c = b[0] := 1\nlet d = a[0] + c[0]"
-    [ "[|0; 0; 0|]"; "[|0; 0; 0|]"; "[|1; 0; 0|]"; "1" ]
+    [ "{0; 0; 0}"; "{0; 0; 0}"; "{1; 0; 0}"; "1" ]
     ()
 
 let test_borrow_restrictions () =
@@ -328,20 +327,20 @@ let test_borrow_restrictions () =
     "a is updated inside a function but bound outside it" ()
 
 let test_grids () =
-  check_run "let g = grid 2 3 0" [ "[|[|0; 0; 0|]; [|0; 0; 0|]|]" ] ();
+  check_run "let g = grid 2 3 0" [ "{{0; 0; 0}; {0; 0; 0}}" ] ();
   check_run
     "let g = grid 2 2 0\nlet h = g[1][0] := 7\nlet x = h[1][0] + h[0][0]"
-    [ "[|[|0; 0|]; [|0; 0|]|]"; "[|[|0; 0|]; [|7; 0|]|]"; "7" ]
+    [ "{{0; 0}; {0; 0}}"; "{{0; 0}; {7; 0}}"; "7" ]
     ();
   check_run "let g = grid 2 3 0\nlet a = rows g\nlet b = cols g"
-    [ "[|[|0; 0; 0|]; [|0; 0; 0|]|]"; "2"; "3" ]
+    [ "{{0; 0; 0}; {0; 0; 0}}"; "2"; "3" ]
     ();
-  check_run "let g = grid 0 0 0\nlet a = rows g" [ "[||]"; "0" ] ();
+  check_run "let g = grid 0 0 0\nlet a = rows g" [ "{}"; "0" ] ();
   check_run "let f n = grid n n 0" [ "<fun> : int -> int grid" ] ();
   check_run
     "let g = grid 2 2 0\n\
      let h = [g[i][j] := i * 2 + j | i <- [0..1], j <- [0..1]]"
-    [ "[|[|0; 0|]; [|0; 0|]|]"; "[|[|0; 1|]; [|2; 3|]|]" ]
+    [ "{{0; 0}; {0; 0}}"; "{{0; 1}; {2; 3}}" ]
     ()
 
 let test_grid_errors () =
@@ -798,7 +797,7 @@ let test_algorithm_examples () =
     "knapsack" "7"
     (last (read_file "../examples/knapsack.nd"));
   Alcotest.(check string)
-    "bellman ford" "[|0; 2; 7; 4; -2|]"
+    "bellman ford" "{0; 2; 7; 4; -2}"
     (last (read_file "../examples/bellman_ford.nd"));
   Alcotest.(check string)
     "trie" "[true; false; true; false; true]"
@@ -812,7 +811,7 @@ let test_algorithm_examples () =
      71; 73; 79; 83; 89; 97]"
     (last (read_file "../examples/sieve.nd"));
   Alcotest.(check string)
-    "union find" "[|2; 2; 2; 7; 7; 7; 7; 7; 8; 9|]"
+    "union find" "{2; 2; 2; 7; 7; 7; 7; 7; 8; 9}"
     (last (read_file "../examples/union_find.nd"))
 
 let test_examples () =
