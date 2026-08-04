@@ -2,6 +2,17 @@ open Ast
 
 exception BorrowError of string
 
+type state
+(** What the checker carries from one statement to the next: which arrays have
+    been given away, and which arguments each function gives away *)
+
+val initial : state
+(** The state a program starts in *)
+
+val check_stmt : state -> statement -> state
+(** Checks one statement and returns the state the next one is checked in, which
+    is what lets the prompt check a line at a time *)
+
 val check_program : program -> unit
 (** Checks that no array is read after it has been given away, which is what
     makes an update safe to perform in place.

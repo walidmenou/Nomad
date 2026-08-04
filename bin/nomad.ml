@@ -5,7 +5,7 @@ open Nomad.Eval
 
 let repl () =
   print_endline "Nomad REPL (Type 'exit' or Ctrl+D to quit)";
-  let rec loop type_env eval_env =
+  let rec loop borrow type_env eval_env =
     print_string ">> ";
     flush stdout;
     let line = try Some (read_line ()) with End_of_file -> None in
@@ -13,11 +13,14 @@ let repl () =
     | None -> print_endline ""
     | Some line -> (
         if line = "exit" || line = "quit" then ()
-        else if String.trim line = "" then loop type_env eval_env
+        else if String.trim line = "" then loop borrow type_env eval_env
         else
           match run program line with
           | Ok stmts -> (
               try
+                let borrow' =
+                  List.fold_left Nomad.Borrow.check_stmt borrow stmts
+                in
                 let type_env', types =
                   List.fold_left
                     (fun (e, ts) stmt ->
@@ -35,22 +38,22 @@ let repl () =
                       e')
                     eval_env (List.rev types) stmts
                 in
-                loop type_env' eval_env'
+                loop borrow' type_env' eval_env'
               with
               | TypeError e ->
                   print_endline ("Type Error: " ^ e);
-                  loop type_env eval_env
+                  loop borrow type_env eval_env
               | EvaluationError e ->
                   print_endline ("Evaluation Error: " ^ e);
-                  loop type_env eval_env
+                  loop borrow type_env eval_env
               | Nomad.Borrow.BorrowError e ->
                   print_endline ("Borrow Error: " ^ e);
-                  loop type_env eval_env)
+                  loop borrow type_env eval_env)
           | Error e ->
               print_endline ("Parse Error: " ^ e);
-              loop type_env eval_env)
+              loop borrow type_env eval_env)
   in
-  loop Nomad.Builtin.types Nomad.Eval.values
+  loop Nomad.Borrow.initial Nomad.Builtin.types Nomad.Eval.values
 
 let () =
   if Array.length Sys.argv < 2 then repl ()

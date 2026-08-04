@@ -176,6 +176,10 @@ and recursive sigs f e =
 and shut sigs e why =
   if walk sigs [] (snd (params e)) <> [] then raise (BorrowError why)
 
+type state = (ident * bool list) list * (ident * string) list
+
+let initial : state = ([], [])
+
 let check_stmt (sigs, dead) stmt =
   match stmt with
   | TypeStmt _ -> (sigs, dead)
@@ -184,4 +188,4 @@ let check_stmt (sigs, dead) stmt =
   | RecStmt (f, e) ->
       ((f, recursive sigs f e) :: List.remove_assoc f sigs, forget dead f)
 
-let check_program stmts = ignore (List.fold_left check_stmt ([], []) stmts)
+let check_program stmts = ignore (List.fold_left check_stmt initial stmts)
