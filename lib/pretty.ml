@@ -91,7 +91,15 @@ let rec string_of_expr = function
       "let rec " ^ id ^ " = " ^ string_of_expr e1 ^ " in " ^ string_of_expr e2
   | List exprs -> "[" ^ String.concat "; " (List.map string_of_expr exprs) ^ "]"
   | Tuple es -> "(" ^ String.concat ", " (List.map string_of_expr es) ^ ")"
-  | Range (e1, e2) -> "[" ^ string_of_expr e1 ^ ".." ^ string_of_expr e2 ^ "]"
+  | Range (e1, st, e2) ->
+      let mid =
+        match st with Some e -> ", " ^ string_of_expr e | None -> ""
+      in
+      "[" ^ string_of_expr e1 ^ mid ^ ".." ^ string_of_expr e2 ^ "]"
+  | Fold (x, init, qs, body) ->
+      "fold " ^ x ^ " = " ^ string_of_expr init ^ " | "
+      ^ String.concat ", " (List.map string_of_qual qs)
+      ^ " -> " ^ string_of_expr body
   | Index (a, i) -> atom a ^ "[" ^ string_of_expr i ^ "]"
   | Update (a, i, v) ->
       atom a ^ "[" ^ string_of_expr i ^ "] := " ^ string_of_expr v

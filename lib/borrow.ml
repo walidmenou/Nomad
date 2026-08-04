@@ -66,7 +66,22 @@ let rec walk sigs dead e =
       let sigs = (f, recursive sigs f e1) :: List.remove_assoc f sigs in
       walk sigs (List.remove_assoc f dead) e2
   | List es | Tuple es -> List.fold_left (walk sigs) dead es
-  | Range (a, b) -> walk sigs (walk sigs dead a) b
+  | Range (a, st, b) ->
+      let dead = walk sigs dead a in
+      let dead = match st with Some e -> walk sigs dead e | None -> dead in
+      walk sigs dead b
+  | Fold (x, init, qs, body) ->
+      let dead = walk sigs dead init in
+      let bound = x :: List.concat_map qual_names qs in
+      let inner = List.fold_left (qual sigs) [] qs in
+      let inner = walk sigs inner body in
+      List.iter
+        (fun (y, _) ->
+          if not (List.mem y bound) then
+            raise
+              (BorrowError (y ^ " is updated inside a fold but bound outside it")))
+        inner;
+      consume dead init "a fold"
   | Match (e, cases) ->
       let dead = walk sigs dead e in
       List.fold_left
@@ -90,6 +105,9 @@ and qual sigs dead q =
   | QLet (x, e) -> forget (walk sigs dead e) x
 
 and forget dead x = List.remove_assoc x dead
+
+and qual_names q =
+  match q with Gen (p, _) -> names p | Guard _ -> [] | QLet (x, _) -> [ x ]
 
 and names p =
   match p with

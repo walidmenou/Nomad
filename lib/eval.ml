@@ -72,11 +72,26 @@ let rec eval env e =
   | List exprs -> VList (List.map (eval env) exprs)
   | Tuple exprs -> VTuple (List.map (eval env) exprs)
   | Comp (body, qs) -> VList (List.rev (comp env qs body []))
-  | Range (e1, e2) -> (
-      match (eval env e1, eval env e2) with
-      | VInt lo, VInt hi ->
-          VList (List.init (max 0 (hi - lo + 1)) (fun i -> VInt (lo + i)))
-      | _ -> raise (EvaluationError "A range needs two integers"))
+  | Range (e1, st, e2) -> (
+      let step =
+        match st with
+        | None -> 1
+        | Some e -> (
+            match (eval env e1, eval env e) with
+            | VInt lo, VInt nxt -> nxt - lo
+            | _ -> raise (EvaluationError "A range needs integers"))
+      in
+      if step = 0 then raise (EvaluationError "A range cannot stand still")
+      else
+        match (eval env e1, eval env e2) with
+        | VInt lo, VInt hi ->
+            let rec go i acc =
+              if (step > 0 && i > hi) || (step < 0 && i < hi) then List.rev acc
+              else go (i + step) (VInt i :: acc)
+            in
+            VList (go lo [])
+        | _ -> raise (EvaluationError "A range needs integers"))
+  | Fold (x, init, qs, body) -> fold_over env qs x body (eval env init)
   | Index (arr, i) -> (
       match (eval env arr, eval env i) with
       | VArray a, VInt i ->
@@ -145,6 +160,24 @@ and comp env qs body acc =
       | _ -> raise (EvaluationError "A generator needs a list"))
   | Guard e :: rest -> if truth env e then comp env rest body acc else acc
   | QLet (id, e) :: rest -> comp ((id, eval env e) :: env) rest body acc
+
+and fold_over env qs x body acc =
+  let env = (x, acc) :: env in
+  match qs with
+  | [] -> eval env body
+  | Gen (p, src) :: rest -> (
+      match eval env src with
+      | VList vs ->
+          List.fold_left
+            (fun acc v ->
+              match match_pattern p v with
+              | Some b -> fold_over (b @ env) rest x body acc
+              | None -> acc)
+            acc vs
+      | _ -> raise (EvaluationError "A generator needs a list"))
+  | Guard e :: rest ->
+      if truth env e then fold_over env rest x body acc else acc
+  | QLet (id, e) :: rest -> fold_over ((id, eval env e) :: env) rest x body acc
 
 and truth env e =
   match eval env e with

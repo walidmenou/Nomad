@@ -61,8 +61,9 @@ type expr =
   | App of expr * expr
   | List of expr list
   | Tuple of expr list
-  | Range of expr * expr
+  | Range of expr * expr option * expr
   | Comp of expr * qualifier list
+  | Fold of ident * expr * qualifier list * expr
   | Index of expr * expr
   | Update of expr * expr * expr
   | Match of expr * (pattern * expr) list

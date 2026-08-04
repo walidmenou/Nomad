@@ -200,11 +200,23 @@ let rec infer_w env e =
       let s, t_v = step s env v in
       let s = Subst.compose (Subst.unify (Subst.apply s t_elem) t_v) s in
       (s, TArray (Subst.apply s t_elem))
-  | Range (e1, e2) ->
-      let s1, t1 = infer_w env e1 in
-      let s = Subst.compose (Subst.unify t1 TInt) s1 in
-      let s, t2 = step s env e2 in
-      (Subst.compose (Subst.unify t2 TInt) s, TList TInt)
+  | Range (e1, st, e2) ->
+      let ints s e =
+        let s, t = step s env e in
+        Subst.compose (Subst.unify t TInt) s
+      in
+      let s = ints [] e1 in
+      let s = match st with Some e -> ints s e | None -> s in
+      (ints s e2, TList TInt)
+  | Fold (x, init, qs, body) ->
+      let s, t_acc = infer_w env init in
+      let env = (x, mono (Subst.apply s t_acc)) :: apply_env s env in
+      let s, env =
+        List.fold_left (fun (s, env) q -> infer_qual s env q) (s, env) qs
+      in
+      let s, t_body = step s env body in
+      let s = Subst.compose (Subst.unify (Subst.apply s t_acc) t_body) s in
+      (s, Subst.apply s t_acc)
   | Match (e, cases) ->
       let s, t_e = infer_w env e in
       let t_ret = fresh () in

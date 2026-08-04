@@ -204,6 +204,40 @@ let test_parenthesised_patterns () =
   check_run "let a = match [[1; 2]] with (x :: xs) :: r -> x | _ -> 0" [ "1" ]
     ()
 
+let test_stepped_range () =
+  check_run "let a = [9, 7..1]" [ "[9; 7; 5; 3; 1]" ] ();
+  check_run "let a = [1, 3..10]" [ "[1; 3; 5; 7; 9]" ] ();
+  check_run "let a = [5, 4..1]" [ "[5; 4; 3; 2; 1]" ] ();
+  check_run "let a = [1, 2..0]" [ "[]" ] ();
+  check_run "let a = [3, 2..3]" [ "[3]" ] ();
+  check_eval_error "let a = [1, 1..5]" "A range cannot stand still" ()
+
+let test_fold () =
+  check_run "let s = fold t = 0 | x <- [1..10] -> t + x" [ "55" ] ();
+  check_run "let s = fold t = 1 | x <- [1..5] -> t * x" [ "120" ] ();
+  check_run "let s = fold t = 0 | x <- [1..10], x % 2 = 0 -> t + x" [ "30" ] ();
+  check_run "let s = fold t = [] | x <- [1..3] -> x :: t" [ "[3; 2; 1]" ] ();
+  check_run "let s = fold t = 0 | x <- [1; 2], y <- [10; 20] -> t + x * y"
+    [ "90" ] ();
+  check_run "let s = fold t = 0 | x <- [1..3], let y = x * x -> t + y" [ "14" ]
+    ();
+  check_run "let n = 4\nlet s = fold t = 0 | x <- [1..n], t < 5 -> t + x"
+    [ "4"; "6" ] ()
+
+let test_fold_arrays () =
+  check_run "let a = fold t = array 3 0 | i <- [0..2] -> t[i] := i * i"
+    [ "[|0; 1; 4|]" ] ();
+  check_run "let a = (fold t = array 4 0 | i <- [3, 2..0] -> t[i] := i)[0]"
+    [ "0" ] ();
+  check_borrow_error
+    "let a = array 3 0\nlet s = fold t = 0 | i <- [0..2] -> t + (a[i] := 1)[i]"
+    "a is updated inside a fold but bound outside it" ();
+  check_borrow_error
+    "let a = array 3 0\n\
+     let b = fold t = a | i <- [0..2] -> t[i] := i\n\
+     let c = a[0]"
+    "a was already given to a fold" ()
+
 let test_arrays () =
   check_run "let a = array 3 0" [ "[|0; 0; 0|]" ] ();
   check_run "let a = array 0 0" [ "[||]" ] ();
@@ -725,7 +759,7 @@ let test_algorithm_examples () =
     "knapsack" "7"
     (last (read_file "../examples/knapsack.nd"));
   Alcotest.(check string)
-    "bellman ford" "[0; 2; 7; 4; -2]"
+    "bellman ford" "[|0; 2; 7; 4; -2|]"
     (last (read_file "../examples/bellman_ford.nd"));
   Alcotest.(check string)
     "trie" "[true; false; true; false; true]"
@@ -787,6 +821,9 @@ let tests =
     ("tuple patterns", `Quick, test_tuple_patterns);
     ("tuple exhaustiveness", `Quick, test_tuple_exhaustiveness);
     ("parenthesised patterns", `Quick, test_parenthesised_patterns);
+    ("stepped range", `Quick, test_stepped_range);
+    ("fold", `Quick, test_fold);
+    ("fold arrays", `Quick, test_fold_arrays);
     ("arrays", `Quick, test_arrays);
     ("array values", `Quick, test_array_values);
     ("array types", `Quick, test_array_types);

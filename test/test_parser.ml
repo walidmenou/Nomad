@@ -129,9 +129,12 @@ let test_multi_argument () =
   check_parse statement "let x = 1" (LetStmt ("x", Int 1)) ()
 
 let test_range () =
-  check_parse expr "[1..5]" (Range (Int 1, Int 5)) ();
-  check_parse expr "[a..b]" (Range (Var "a", Var "b")) ();
-  check_parse expr "[1..n - 1]" (Range (Int 1, BinOp (Var "n", Sub, Int 1))) ();
+  check_parse expr "[1..5]" (Range (Int 1, None, Int 5)) ();
+  check_parse expr "[a..b]" (Range (Var "a", None, Var "b")) ();
+  check_parse expr "[1..n - 1]"
+    (Range (Int 1, None, BinOp (Var "n", Sub, Int 1)))
+    ();
+  check_parse expr "[9, 7..1]" (Range (Int 9, Some (Int 7), Int 1)) ();
   check_parse expr "[1; 2]" (List [ Int 1; Int 2 ]) ();
   check_parse expr "[]" (List []) ()
 
@@ -148,7 +151,7 @@ let test_comprehension () =
     (Comp (Var "x", [ Gen (PatCons (PatVar "h", PatVar "t"), Var "xss") ]))
     ();
   check_parse expr "[x | x <- [1..3]]"
-    (Comp (Var "x", [ Gen (PatVar "x", Range (Int 1, Int 3)) ]))
+    (Comp (Var "x", [ Gen (PatVar "x", Range (Int 1, None, Int 3)) ]))
     ();
   check_parse expr "[a < b]" (List [ BinOp (Var "a", Less, Var "b") ]) ()
 
