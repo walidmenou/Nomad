@@ -11,14 +11,13 @@
 
 (license LICENSE)
 
-(documentation https://url/to/documentation)
-
 (package
  (name nomad)
- (synopsis "A short synopsis")
- (description "A longer description")
- (depends ocaml)
+ (synopsis "A functional language with borrow checking")
+ (description
+  "A small, strict, statically typed functional language in the ML family. Types are inferred and never written down. Arrays are updated in place under a borrow check, so a table costs what an array costs and still behaves as a value.")
+ (depends
+  ocaml
+  (alcotest :with-test))
  (tags
-  ("add topics" "to describe" your project)))
-
-; See the complete stanza docs at https://dune.readthedocs.io/en/stable/reference/dune-project/index.html
+  (language interpreter "borrow checking" "type inference")))
