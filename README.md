@@ -6,29 +6,6 @@ Nomad exists to state the answer to a programming challenge in as few lines as i
 it. No program carries a type annotation, because the checker works out every type on its own. One
 rule about arrays gives constant-time updates without giving up value semantics.
 
-## A taste
-
-The 0/1 knapsack, whole. A comprehension whose body is an update fills an array instead of collecting
-a list, and the descending range lets one row stand in for the table.
-
-```
-let knapsack cap items =
-  let t = array (cap + 1) 0 in
-  [t[w] := max t[w] (t[w - wt] + vl)
-   | (wt, vl) <- items, w <- [cap, cap - 1..wt]][cap]
-```
-
-The update happens in place, and the borrow checker proves nothing can observe the array afterwards.
-
-```
->> let a = array 3 0
-{0; 0; 0}
->> let b = a[0] := 1
-{1; 0; 0}
->> a[0]
-Borrow Error: a was already given to an update
-```
-
 ## Build and run
 
 Needs OCaml and dune, plus alcotest to run the tests.
@@ -50,13 +27,25 @@ make test           # 137 tests
 - Chained comparison, so `0 <= x < 5` means what it means in mathematics
 - A pipe operator, stepped ranges and layout-sensitive statements
 
-## What is not
+## Sample Program
 
-There is no standard library, so every program writes its own `length`. There is no way to read
-input. An array may not be stored inside another structure, which means no function can hand back a
-table together with a result, so memoised recursion and one-pass union-find cannot be written yet.
+The 0/1 knapsack, whole. A comprehension whose body is an update fills an array instead of collecting
+a list, and the descending range lets one row stand in for the table.
 
-## Documentation
+```
+let knapsack cap items =
+  let t = array (cap + 1) 0 in
+  [t[w] := max t[w] (t[w - wt] + vl)
+   | (wt, vl) <- items, w <- [cap, cap - 1..wt]][cap]
+```
 
-`report.pdf` is the language reference. It gives the grammar and documents every construct with its
-type, what it does and a worked example. `examples/` holds twelve programs, each pinned by a test.
+The update happens in place, and the borrow checker proves nothing can observe the array afterwards.
+
+```
+>> let a = array 3 0
+{0; 0; 0}
+>> let b = a[0] := 1
+{1; 0; 0}
+>> a[0]
+Borrow Error: a was already given to an update
+```
