@@ -388,6 +388,43 @@ let test_aliasing () =
     ();
   check_run "let n = 5\nlet m = n\nlet s = n + m" [ "5"; "5"; "10" ] ()
 
+let test_captured_arrays () =
+  check_borrow_error
+    "let a = array 3 0\n\
+     let g = fun z -> a\n\
+     let b = g 0\n\
+     let c = b[0] := 9\n\
+     let peek = a[0]"
+    "a was already given to an update" ();
+  check_borrow_error
+    "let a = array 3 0\n\
+     let call f = f 0\n\
+     let b = call (fun z -> a)\n\
+     let c = b[0] := 9\n\
+     let peek = a[0]"
+    "a was already given to an update" ();
+  check_borrow_error
+    "let a = array 3 0\n\
+     let rec g n = if n = 0 then a else g (n - 1)\n\
+     let b = g 3\n\
+     let c = b[0] := 9\n\
+     let peek = a[0]"
+    "a was already given to an update" ();
+  check_run
+    "let a = array 3 0\n\
+     let twice f x = f (f x)\n\
+     let inc n = n + 1\n\
+     let r = twice inc 1\n\
+     let s = a[0]"
+    [
+      "{0; 0; 0}";
+      "<fun> : ('a -> 'a) -> 'a -> 'a";
+      "<fun> : int -> int";
+      "3";
+      "0";
+    ]
+    ()
+
 let test_pattern_binding_types () =
   check_run "let tl l = match l with [] -> [] | x :: xs -> xs"
     [ "<fun> : 'a list -> 'a list" ]
@@ -907,6 +944,7 @@ let tests =
     ("grids", `Quick, test_grids);
     ("grid errors", `Quick, test_grid_errors);
     ("aliasing", `Quick, test_aliasing);
+    ("captured arrays", `Quick, test_captured_arrays);
     ("pattern binding types", `Quick, test_pattern_binding_types);
     ("declarations", `Quick, test_declarations);
     ("declaration types", `Quick, test_declaration_types);

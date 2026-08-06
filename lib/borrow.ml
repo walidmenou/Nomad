@@ -25,7 +25,8 @@ let needed cs =
   in
   last 0 cs
 
-type env = { sigs : (ident * bool list) list; alias : (ident * ident) list }
+type fn = { gives : bool list; escapes : ident list }
+type env = { sigs : (ident * fn) list; alias : (ident * ident) list }
 
 let live dead x =
   match List.assoc_opt x dead with
@@ -40,7 +41,7 @@ let rec walk env dead e =
   | Var x ->
       live dead x;
       (match List.assoc_opt x env.sigs with
-      | Some cs when consumes cs ->
+      | Some f when consumes f.gives ->
           raise
             (BorrowError
                (x
@@ -165,6 +166,9 @@ and roots env e =
           let ns = names p in
           List.filter (fun y -> not (List.mem y ns)) (roots env b))
         cases
+  | Fun _ ->
+      let ps, body = params e in
+      List.filter (fun y -> not (List.mem y ps)) (roots env body)
   | App _ -> (
       let head, args = spine e [] in
       match head with
@@ -173,14 +177,20 @@ and roots env e =
         ->
           []
       | _ ->
-          let cs =
-            match head with
-            | Var f -> Option.value ~default:[] (List.assoc_opt f env.sigs)
-            | _ -> []
+          let known =
+            match head with Var f -> List.assoc_opt f env.sigs | _ -> None
           in
-          let moved i = i < List.length cs && List.nth cs i in
-          List.concat_map (roots env)
-            (List.filteri (fun i _ -> not (moved i)) args))
+          let out =
+            match known with Some f -> f.escapes | None -> roots env head
+          in
+          let moved i =
+            match known with
+            | Some f -> i < List.length f.gives && List.nth f.gives i
+            | None -> false
+          in
+          out
+          @ List.concat_map (roots env)
+              (List.filteri (fun i _ -> not (moved i)) args))
   | _ -> []
 
 and apply env dead e =
@@ -188,7 +198,7 @@ and apply env dead e =
   match head with
   | Var f when List.mem_assoc f env.sigs ->
       live dead f;
-      let cs = List.assoc f env.sigs in
+      let cs = (List.assoc f env.sigs).gives in
       if List.length args < needed cs then
         raise
           (BorrowError
@@ -230,7 +240,10 @@ and signature env e =
         raise
           (BorrowError (x ^ " is updated inside a function but bound outside it")))
     dead;
-  List.map (fun p -> List.mem_assoc p dead) ps
+  {
+    gives = List.map (fun p -> List.mem_assoc p dead) ps;
+    escapes = List.sort_uniq compare (roots env e);
+  }
 
 and recursive env f e =
   let ps, _ = params e in
@@ -240,7 +253,7 @@ and recursive env f e =
     in
     if next = cur then cur else fix next
   in
-  fix (List.map (fun _ -> false) ps)
+  fix { gives = List.map (fun _ -> false) ps; escapes = [] }
 
 and shut env e why =
   if walk env [] (snd (params e)) <> [] then raise (BorrowError why)
