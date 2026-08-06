@@ -425,6 +425,28 @@ let test_captured_arrays () =
     ]
     ()
 
+let test_pattern_bindings () =
+  check_run "let p = (1, 2)\nlet (a, b) = p\nlet s = a + b"
+    [ "(1, 2)"; "(1, 2)"; "3" ]
+    ();
+  check_run "let ((a, b), c) = ((1, 2), 3)\nlet s = a + b + c"
+    [ "((1, 2), 3)"; "6" ] ();
+  check_run "let add = fun (a, b) -> a + b\nlet s = add (3, 4)"
+    [ "<fun> : (int * int) -> int"; "7" ]
+    ();
+  check_run "let add (a, b) = a + b\nlet s = add (3, 4)"
+    [ "<fun> : (int * int) -> int"; "7" ]
+    ();
+  check_run "let s = let (a, b) = (1, 2) in a * b" [ "2" ] ();
+  check_run "type box = Box int\nlet open1 (Box n) = n\nlet s = open1 (Box 7)"
+    [ "<fun> : box -> int"; "7" ]
+    ();
+  check_run "let const x _ = x\nlet s = const 1 2"
+    [ "<fun> : 'a -> 'b -> 'a"; "1" ]
+    ();
+  check_type_error "let l = [1; 2]\nlet (x :: xs) = l"
+    "This binding does not match every value" ()
+
 let test_pattern_binding_types () =
   check_run "let tl l = match l with [] -> [] | x :: xs -> xs"
     [ "<fun> : 'a list -> 'a list" ]
@@ -945,6 +967,7 @@ let tests =
     ("grid errors", `Quick, test_grid_errors);
     ("aliasing", `Quick, test_aliasing);
     ("captured arrays", `Quick, test_captured_arrays);
+    ("pattern bindings", `Quick, test_pattern_bindings);
     ("pattern binding types", `Quick, test_pattern_binding_types);
     ("declarations", `Quick, test_declarations);
     ("declaration types", `Quick, test_declaration_types);

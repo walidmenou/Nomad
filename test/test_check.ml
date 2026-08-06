@@ -28,28 +28,31 @@ let fact =
           BinOp (Var "n", Mul, App (Var "f", BinOp (Var "n", Sub, Int 1))) ) )
 
 let test_let () =
-  check_stmts [ LetStmt ("x", Int 1) ] [ "x : int" ] ();
+  check_stmts [ LetStmt (PatVar "x", Int 1) ] [ "x : int" ] ();
   check_stmts
-    [ LetStmt ("x", Int 1); LetStmt ("y", BinOp (Var "x", Add, Int 1)) ]
+    [
+      LetStmt (PatVar "x", Int 1);
+      LetStmt (PatVar "y", BinOp (Var "x", Add, Int 1));
+    ]
     [ "x : int"; "y : int" ] ()
 
 let test_rec () =
   check_stmts [ RecStmt ("f", fact) ] [ "f : (int -> int)" ] ();
   check_stmts
-    [ RecStmt ("f", fact); LetStmt ("x", App (Var "f", Int 5)) ]
+    [ RecStmt ("f", fact); LetStmt (PatVar "x", App (Var "f", Int 5)) ]
     [ "f : (int -> int)"; "x : int" ]
     ()
 
 let test_expr () =
   check_stmts
-    [ LetStmt ("x", Int 1); ExprStmt (BinOp (Var "x", Add, Int 1)) ]
+    [ LetStmt (PatVar "x", Int 1); ExprStmt (BinOp (Var "x", Add, Int 1)) ]
     [ "x : int" ] ()
 
 let test_program () =
   let types =
     check_program
       [
-        LetStmt ("x", Int 1);
+        LetStmt (PatVar "x", Int 1);
         RecStmt ("f", fact);
         ExprStmt (App (Var "f", Var "x"));
       ]
@@ -62,7 +65,10 @@ let test_program () =
 let test_errors () =
   check_error [ ExprStmt (Var "x") ] "Unbound variable x" ();
   check_error
-    [ LetStmt ("x", BinOp (Int 1, Add, Bool true)); LetStmt ("y", Int 2) ]
+    [
+      LetStmt (PatVar "x", BinOp (Int 1, Add, Bool true));
+      LetStmt (PatVar "y", Int 2);
+    ]
     "Type mismatch: bool and int" ()
 
 let tests =

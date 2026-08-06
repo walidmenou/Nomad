@@ -251,9 +251,11 @@ let eval_stmt env stmt =
       let bind (c, args) = (c, VCon (c, List.length args, [])) in
       (List.map bind cons @ env, VUnit)
   | ExprStmt e -> (env, eval env e)
-  | LetStmt (id, e) ->
+  | LetStmt (p, e) -> (
       let v = eval env e in
-      ((id, v) :: env, v)
+      match match_pattern p v with
+      | Some bindings -> (bindings @ env, v)
+      | None -> raise (EvaluationError "Match failure"))
   | RecStmt (id, e) ->
       let v = rec_value env id e in
       ((id, v) :: env, v)

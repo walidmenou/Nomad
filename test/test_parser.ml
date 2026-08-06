@@ -117,7 +117,7 @@ let test_fun_expr () =
 
 let test_multi_argument () =
   check_parse statement "let f x y = x"
-    (LetStmt ("f", Fun ("x", Fun ("y", Var "x"))))
+    (LetStmt (PatVar "f", Fun ("x", Fun ("y", Var "x"))))
     ();
   check_parse statement "let rec f x = x" (RecStmt ("f", Fun ("x", Var "x"))) ();
   check_parse expr "let f x = x in f"
@@ -126,7 +126,7 @@ let test_multi_argument () =
   check_parse expr "let rec f x = x in f"
     (Rec ("f", Fun ("x", Var "x"), Var "f"))
     ();
-  check_parse statement "let x = 1" (LetStmt ("x", Int 1)) ()
+  check_parse statement "let x = 1" (LetStmt (PatVar "x", Int 1)) ()
 
 let test_range () =
   check_parse expr "[1..5]" (Range (Int 1, None, Int 5)) ();
@@ -192,7 +192,7 @@ let test_pattern () =
     ()
 
 let test_statement () =
-  check_parse statement "let x = 1" (LetStmt ("x", Int 1)) ();
+  check_parse statement "let x = 1" (LetStmt (PatVar "x", Int 1)) ();
   check_parse statement "let rec f = fun x -> x"
     (RecStmt ("f", Fun ("x", Var "x")))
     ();
@@ -254,8 +254,8 @@ let test_type_expr () =
 let test_program () =
   check_parse program "let x = 1 let y = 2 if true then x + y else 0"
     [
-      LetStmt ("x", Int 1);
-      LetStmt ("y", Int 2);
+      LetStmt (PatVar "x", Int 1);
+      LetStmt (PatVar "y", Int 2);
       ExprStmt (If (Bool true, BinOp (Var "x", Add, Var "y"), Int 0));
     ]
     ()

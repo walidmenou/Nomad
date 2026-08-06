@@ -10,12 +10,16 @@ let rec split l =
   match l with
   | [] -> ([], [])
   | x :: [] -> ([x], [])
-  | x :: y :: r -> (match split r with (a, b) -> (x :: a, y :: b))
+  | x :: y :: r ->
+      let (a, b) = split r in
+      (x :: a, y :: b)
 
 let rec msort l =
   match l with
   | [] -> []
   | x :: [] -> [x]
-  | _ -> (match split l with (a, b) -> merge (msort a) (msort b))
+  | _ ->
+      let (a, b) = split l in
+      merge (msort a) (msort b)
 
 let result = msort [5; 2; 9; 1; 5; 6; 3]

@@ -71,7 +71,7 @@ type expr =
 and qualifier = Gen of pattern * expr | Guard of expr | QLet of ident * expr
 
 type statement =
-  | LetStmt of ident * expr
+  | LetStmt of pattern * expr
   | RecStmt of ident * expr
   | TypeStmt of ident * ident list * (ident * type_expr list) list
   | ExprStmt of expr

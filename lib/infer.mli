@@ -32,6 +32,10 @@ val apply_env : Subst.t -> env -> env
 (** Applies the substitution to every scheme in an environment, leaving what
     each one quantifies alone *)
 
+val infer_pat : env -> pattern -> (ident * typ) list * typ
+(** What a pattern binds and the type it matches, with the substitution its own
+    parts force already applied to both *)
+
 val infer_w : env -> expr -> Subst.t * typ
 (** Infers the type of an expression, returning the substitution it forces
     together with the type it found *)

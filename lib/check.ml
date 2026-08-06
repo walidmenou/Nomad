@@ -73,11 +73,20 @@ let check_stmt env stmt =
   | ExprStmt e ->
       let s, t = infer_w env e in
       (apply_env s env, Subst.apply s t)
-  | LetStmt (id, e) ->
+  | LetStmt (p, e) ->
       let s, t = infer_w env e in
-      let env = apply_env s env in
+      let bindings, t_pat = infer_pat env p in
+      let s = Subst.compose (Subst.unify (Subst.apply s t) t_pat) s in
       let t = Subst.apply s t in
-      ((id, generalize env t) :: env, t)
+      if not (Pat.exhaustive t [ p ]) then
+        raise (Subst.TypeError "This binding does not match every value");
+      let env = apply_env s env in
+      let bound =
+        List.map
+          (fun (id, bt) -> (id, generalize env (Subst.apply s bt)))
+          bindings
+      in
+      (bound @ env, t)
   | RecStmt (id, e) ->
       let s, t = rec_binding env id e in
       let env = apply_env s env in

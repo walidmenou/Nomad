@@ -203,7 +203,16 @@ let chain_cmps op_p exp_p =
   |*> fun pairs -> return (cmp_helper first pairs)
 
 let pipe = keyword "|>"
-let curry params body = List.fold_right (fun p acc -> Fun (p, acc)) params body
+let hidden = "$arg"
+
+let curry ps body =
+  List.fold_right
+    (fun p acc ->
+      match p with
+      | PatVar x -> Fun (x, acc)
+      | _ -> Fun (hidden, Match (Var hidden, [ (p, acc) ])))
+    ps body
+
 let nil_pat = keyword "[]" |>> return PatNil
 let wildcard_pat = keyword "_" |>> return PatWildcard
 let var_pat = ident |*> fun x -> return (PatVar x)
@@ -326,7 +335,7 @@ and guard input = (expr |*> fun e -> return (Guard e)) input
 
 and qual_let input =
   ( keyword "let" |>> ident |*> fun id ->
-    many ident |*> fun params ->
+    many atom_pat |*> fun params ->
     keyword "=" |>> expr |*> fun e -> return (QLet (id, curry params e)) )
     input
 
@@ -382,16 +391,24 @@ and if_expr input =
     input
 
 and fun_expr input =
-  ( keyword "fun" |>> some ident |*> fun params ->
+  ( keyword "fun" |>> some atom_pat |*> fun params ->
     arrow |>> expr |*> fun exp -> return (curry params exp) )
     input
 
 and let_expr input =
-  ( keyword "let" |>> ident |*> fun id ->
-    many ident |*> fun params ->
+  ( keyword "let" |>> binder |*> fun (head, params) ->
     keyword "=" |>> expr |*> fun exp1 ->
     keyword "in" |>> expr |*> fun exp2 ->
-    return (Let (id, curry params exp1, exp2)) )
+    match head with
+    | PatVar id -> return (Let (id, curry params exp1, exp2))
+    | p when params = [] -> return (Match (exp1, [ (p, exp2) ]))
+    | _ -> none )
+    input
+
+and binder input =
+  (ident
+  |*> (fun x -> many atom_pat |*> fun ps -> return (PatVar x, ps))
+  <|> (pattern |*> fun p -> return (p, [])))
     input
 
 and match_expr input =
@@ -406,22 +423,24 @@ and match_expr input =
 
 and let_rec_expr input =
   ( keyword "let" |>> keyword "rec" |>> ident |*> fun id ->
-    many ident |*> fun params ->
+    many atom_pat |*> fun params ->
     keyword "=" |>> expr |*> fun exp1 ->
     keyword "in" |>> expr |*> fun exp2 ->
     return (Rec (id, curry params exp1, exp2)) )
     input
 
 let let_stmt input =
-  ( keyword "let" |>> ident |*> fun id ->
-    many ident |*> fun params ->
-    keyword "=" |>> expr |*> fun exp -> return (LetStmt (id, curry params exp))
-  )
+  ( keyword "let" |>> binder |*> fun (head, params) ->
+    keyword "=" |>> expr |*> fun exp ->
+    match head with
+    | PatVar _ -> return (LetStmt (head, curry params exp))
+    | p when params = [] -> return (LetStmt (p, exp))
+    | _ -> none )
     input
 
 let rec_stmt input =
   ( keyword "let" |>> keyword "rec" |>> ident |*> fun id ->
-    many ident |*> fun params ->
+    many atom_pat |*> fun params ->
     keyword "=" |>> expr |*> fun exp -> return (RecStmt (id, curry params exp))
   )
     input

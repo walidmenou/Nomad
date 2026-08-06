@@ -50,8 +50,10 @@ val eval : env -> expr -> value
 
 val eval_stmt : env -> statement -> env * value
 (** Evaluates a statement and returns the environment the next one runs in,
-    along with the value it produced. A type declaration binds each of its
-    constructors and produces nothing *)
+    along with the value it produced. A binding may take a pattern apart, and
+    the checker has already made sure the pattern matches every value it could
+    be given. A type declaration binds each of its constructors and produces
+    nothing *)
 
 val show_val : typ -> value -> string
 (** Prints a value the way the source would write it. A function has no useful

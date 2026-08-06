@@ -266,7 +266,8 @@ let check_stmt (env, dead) stmt =
   match stmt with
   | TypeStmt _ -> (env, dead)
   | ExprStmt e -> (env, walk env dead e)
-  | LetStmt (x, e) -> local env dead x e
+  | LetStmt (PatVar x, e) -> local env dead x e
+  | LetStmt (p, e) -> (env, List.fold_left forget (walk env dead e) (names p))
   | RecStmt (f, e) ->
       ( {
           env with

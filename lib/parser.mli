@@ -316,6 +316,11 @@ val pattern : pattern t
 val let_rec_expr : expr t
 (** Parses a `let rec f x y = ... in ...` expression *)
 
+val binder : (pattern * pattern list) t
+(** Parses what a [let] binds: either a name followed by its parameters, or a
+    pattern on its own. A parameter is a pattern too, so [let f (a, b) = ...]
+    takes its pair apart where it is named *)
+
 val statement : statement t
 (** Parses a single statement *)
 
