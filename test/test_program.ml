@@ -356,6 +356,38 @@ let test_grid_errors () =
   check_borrow_error "let g = grid 2 2 0\nlet h = g[0][0] := 1\nlet x = g[0][0]"
     "g was already given to an update" ()
 
+let test_aliasing () =
+  check_borrow_error
+    "let a = array 3 0\nlet b = a\nlet c = a[0] := 9\nlet peek = b[0]"
+    "b was already given to an update" ();
+  check_borrow_error
+    "let a = array 3 0\nlet b = a\nlet c = b[0] := 9\nlet peek = a[0]"
+    "a was already given to an update" ();
+  check_borrow_error
+    "let a = array 3 0\n\
+     let id x = x\n\
+     let b = id a\n\
+     let c = a[0] := 9\n\
+     let peek = b[0]"
+    "b was already given to an update" ();
+  check_borrow_error
+    "let a = array 3 0\n\
+     let b = if true then a else a\n\
+     let c = a[0] := 9\n\
+     let peek = b[0]"
+    "b was already given to an update" ();
+  check_borrow_error
+    "let a = array 3 0\n\
+     let b = a\n\
+     let c = b\n\
+     let d = a[0] := 9\n\
+     let peek = c[0]"
+    "c was already given to an update" ();
+  check_run "let a = array 3 0\nlet b = a\nlet c = a[0] + b[0]"
+    [ "{0; 0; 0}"; "{0; 0; 0}"; "0" ]
+    ();
+  check_run "let n = 5\nlet m = n\nlet s = n + m" [ "5"; "5"; "10" ] ()
+
 let test_pattern_binding_types () =
   check_run "let tl l = match l with [] -> [] | x :: xs -> xs"
     [ "<fun> : 'a list -> 'a list" ]
@@ -874,6 +906,7 @@ let tests =
     ("borrow restrictions", `Quick, test_borrow_restrictions);
     ("grids", `Quick, test_grids);
     ("grid errors", `Quick, test_grid_errors);
+    ("aliasing", `Quick, test_aliasing);
     ("pattern binding types", `Quick, test_pattern_binding_types);
     ("declarations", `Quick, test_declarations);
     ("declaration types", `Quick, test_declaration_types);

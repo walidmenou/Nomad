@@ -22,6 +22,12 @@ val check_program : program -> unit
     to it. A name that has been given away may not be used again, and [copy] is
     how a program keeps a version it still needs.
 
+    Binding one name to another, as [let b = a] does, makes both names stand for
+    the same array, so giving away either gives away both. The same holds when
+    an array reaches a name through a branch or through a function that returns
+    what it was handed. A built-in never returns an array it was given, so
+    [copy] starts a name of its own.
+
     Which arguments a function gives away is worked out from its body rather
     than written down, so types are unchanged. Two restrictions keep that sound.
     A function that writes to an argument has to be called with all of its
